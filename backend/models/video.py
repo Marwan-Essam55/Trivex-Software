@@ -1,14 +1,29 @@
-from sqlalchemy import Column, String, Integer
-# Backend Team: هنستورد الـ Base من إعدادات الداتا بيز اللي عملناها
+import enum
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, Boolean, Integer, Float, DateTime, ForeignKey, Enum as SQLEnum, Uuid
+from sqlalchemy.orm import relationship
 from database.session import Base
+
+class VideoStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 class Video(Base):
     __tablename__ = "videos"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(Uuid, ForeignKey("users.id"), nullable=False)
     file_path = Column(String, nullable=False)
-    status = Column(String, default="PENDING") 
+    file_size_mb = Column(Float, nullable=True)
+    duration_seconds = Column(Integer, nullable=True)
+    status = Column(SQLEnum(VideoStatus), default=VideoStatus.PENDING)
+    is_deleted = Column(Boolean, default=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    
-    # 1. يضيف علاقة الفيديو بالـ User (Foreign Key)
-    # 2. يضيف حقول الـ file_size_mb و الـ duration
+    user = relationship("User", back_populates="videos")
+    result = relationship("AnalysisResult", back_populates="video", uselist=False, cascade="all, delete-orphan")
+    feedbacks = relationship("Feedback", back_populates="video", cascade="all, delete-orphan")
