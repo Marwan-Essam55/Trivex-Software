@@ -1,8 +1,11 @@
-from pydantic_settings import BaseSettings
+import os
+from dotenv import load_dotenv
 
-class Settings(BaseSettings):
-    # Backend Team: Add DB URL, JWT Secret, and other configurations here.
-    db_url: str = ""
-    jwt_secret: str = ""
+load_dotenv()
+
+class Settings:
+    db_url: str = os.getenv("DATABASE_URL", "sqlite:///./trivex.db")
+    jwt_secret: str = os.getenv("JWT_SECRET", "your-super-secret-key-trivex")
+    CLOUDINARY_URL: str = os.getenv("CLOUDINARY_URL", "")
 
 settings = Settings()
