@@ -1,17 +1,37 @@
+import cloudinary
+import cloudinary.uploader
+import uuid
+from fastapi import UploadFile
 from models.video import Video
-# from tasks.ai_workers import process_video_task
+from core.config import settings
 
-def save_uploaded_video(db_session, file_name: str):
+cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
+
+def upload_video_to_cloudinary(file: UploadFile):
+    # Upload the file to Cloudinary
+    result = cloudinary.uploader.upload(
+        file.file, 
+        resource_type="video", 
+        folder="trivex_videos",
+        public_id=f"video_{uuid.uuid4().hex}"
+    )
+    
+    secure_url = result.get("secure_url")
+    file_size_bytes = result.get("bytes", 0)
+    file_size_mb = file_size_bytes / (1024 * 1024)
+    
+    return secure_url, file_size_mb
+
+def save_uploaded_video(db_session, user_id, file_path: str, file_size_mb: float):
     # 1. بنسجل الفيديو في الداتا بيز بحالة PENDING
-    new_video = Video(file_path=f"uploads/{file_name}", status="PENDING")
+    new_video = Video(
+        user_id=user_id,
+        file_path=file_path, 
+        file_size_mb=file_size_mb,
+        status="PENDING"
+    )
     db_session.add(new_video)
     db_session.commit()
     db_session.refresh(new_video)
     
-    # 2. بنبعت المهمة تشتغل في الخلفية (عشان السيرفر ميعلقش)
-    # process_video_task.delay(new_video.id)
-    
     return new_video
-
-    # 1. يكتب الكود الفعلي اللي بيحفظ ملف الـ MP4 على الهارد ديسك
-    # 2. يكتب دالة get_history عشان ترجع فيديوهات اليوزر
