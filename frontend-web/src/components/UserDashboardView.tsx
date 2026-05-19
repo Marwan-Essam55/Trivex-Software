@@ -1,10 +1,8 @@
 import { UploadCloud, Video, BarChart3, Activity, CheckCircle2, Clock, PlayCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface DashboardViewProps {
-  onAnalyze: () => void;
-}
-
-export function DashboardView({ onAnalyze }: DashboardViewProps) {
+export function UserDashboardView() {
+  const navigate = useNavigate();
   const recentFiles = [
     { id: 1, name: 'clinical_interview_042.mp4', date: 'Today, 10:45 AM', status: 'Completed', statusColor: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
     { id: 2, name: 'focus_group_session_b.mov', date: 'Today, 09:12 AM', status: 'Processing', statusColor: 'bg-slate-100 text-slate-700 border-slate-200' },
@@ -14,7 +12,7 @@ export function DashboardView({ onAnalyze }: DashboardViewProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Overview</h1>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Workspace</h1>
         <p className="text-sm text-slate-500">Monitor your data processing and analytical workloads.</p>
       </div>
 
@@ -51,7 +49,7 @@ export function DashboardView({ onAnalyze }: DashboardViewProps) {
       <div className="bg-white rounded-lg border border-slate-200 p-8 sm:p-12 mb-8 flex flex-col items-center justify-center text-center shadow-sm">
         <div 
           className="w-full max-w-3xl border-2 border-dashed border-slate-300 rounded-lg p-10 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 cursor-pointer group flex flex-col items-center"
-          onClick={onAnalyze}
+          onClick={() => navigate('/fusion-engine')}
         >
           <div className="w-16 h-16 bg-white border border-slate-200 group-hover:border-slate-300 rounded-lg flex items-center justify-center mb-5 shadow-sm transition-colors">
             <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-slate-700 transition-colors" />
@@ -81,7 +79,7 @@ export function DashboardView({ onAnalyze }: DashboardViewProps) {
         </div>
         <div className="divide-y divide-slate-100">
           {recentFiles.map((file) => (
-            <div key={file.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group" onClick={onAnalyze}>
+            <div key={file.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => navigate('/fusion-engine')}>
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-md bg-white border border-slate-200 shadow-sm flex items-center justify-center mr-4 group-hover:border-slate-300 transition-colors">
                   <Video className="w-4 h-4 text-slate-500" />

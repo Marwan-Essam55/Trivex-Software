@@ -1,10 +1,8 @@
 import { Search, CheckCircle2, Clock, Filter, Video } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface HistoryViewProps {
-  onViewDetails: (id: string) => void;
-}
-
-export function HistoryView({ onViewDetails }: HistoryViewProps) {
+export function HistoryView() {
+  const navigate = useNavigate();
   const historyData = [
     { id: '1', name: 'clinical_interview_042.mp4', date: '2026-04-19', emotion: 'Confident Engagement', score: '88%', status: 'Completed', thumbnail: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150&h=100' },
     { id: '2', name: 'focus_group_session_b.mov', date: '2026-04-19', emotion: 'Pending', score: '-', status: 'Processing', thumbnail: '' },
@@ -108,7 +106,7 @@ export function HistoryView({ onViewDetails }: HistoryViewProps) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
-                      onClick={() => onViewDetails(item.id)}
+                      onClick={() => navigate('/fusion-engine')}
                       className="text-slate-700 hover:text-white transition-colors bg-white border border-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-900 hover:border-slate-900 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
                     >
                       View Report

@@ -19,6 +19,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     profile_picture_url = Column(String, nullable=True)
     role = Column(SQLEnum(UserRole), default=UserRole.USER)
+    google_id = Column(String, nullable=True, unique=True, index=True)
     is_active = Column(Boolean, default=True)
     available_credits = Column(Integer, default=10)
     created_at = Column(DateTime, default=datetime.utcnow)

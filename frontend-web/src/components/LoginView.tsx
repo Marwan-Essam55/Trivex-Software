@@ -1,17 +1,51 @@
 import { useState } from 'react';
 import { Activity, Mail, Lock, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
-interface LoginViewProps {
-  onLogin: () => void;
-}
-
-export function LoginView({ onLogin }: LoginViewProps) {
+export function LoginView() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin();
+    try {
+      const formData = new URLSearchParams();
+      formData.append('username', email);
+      formData.append('password', password);
+
+      const response = await fetch('http://localhost:8000/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('access_token', data.access_token);
+        setError(null);
+        
+        try {
+          const decoded: any = jwtDecode(data.access_token);
+          if (decoded.role === 'admin') {
+            navigate('/dashboard/admin');
+          } else {
+            navigate('/dashboard/user');
+          }
+        } catch (e) {
+          navigate('/dashboard/user'); // fallback
+        }
+      } else {
+        const err = await response.json();
+        setError(err.detail || 'Authentication failed. Please check your credentials.');
+      }
+    } catch (err) {
+      setError('Network error connecting to the server.');
+    }
   };
 
   return (
@@ -44,6 +78,24 @@ export function LoginView({ onLogin }: LoginViewProps) {
             <p className="mt-2 text-slate-500">Authenticate to enter the secure environment.</p>
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 rounded-md bg-red-50 border border-red-200 animate-fade-in">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Authentication Error</h3>
+                  <div className="mt-1 text-sm text-red-700">
+                    {error}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-5">
               <div className="relative group">
@@ -54,7 +106,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
                   type="email"
                   id="email"
                   className="block w-full pl-11 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-all peer placeholder-transparent shadow-sm"
-                  placeholder="admin@trivex.io"
+                  placeholder="tito@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

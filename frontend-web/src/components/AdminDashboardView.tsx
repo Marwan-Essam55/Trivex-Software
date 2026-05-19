@@ -1,0 +1,713 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Users, UserPlus, Search, Filter, Shield, ShieldOff,
+  Edit2, Trash2, X, CheckCircle2, XCircle, Eye, EyeOff,
+  ChevronDown, AlertTriangle, Loader2, Key, ToggleLeft, UserCheck,
+} from 'lucide-react';
+
+const API_BASE = 'http://localhost:8000';
+
+type UserRole = 'admin' | 'user';
+
+interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: UserRole;
+  available_credits: number;
+  is_active: boolean;
+  profile_picture_url?: string | null;
+}
+
+function authHeaders() {
+  const token = localStorage.getItem('access_token');
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({
+  label, value, icon: Icon, accent = false, danger = false,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ElementType;
+  accent?: boolean;
+  danger?: boolean;
+}) {
+  const iconBg = danger
+    ? 'bg-red-50 text-red-600 border-red-100'
+    : accent
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    : 'bg-slate-100 text-slate-700 border-slate-200';
+  return (
+    <div className="bg-white rounded-lg border border-slate-200 p-6 flex items-center shadow-sm">
+      <div className={`p-3 rounded-md border mr-4 ${iconBg}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+        <p className="text-2xl font-bold text-slate-900">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Role Badge ───────────────────────────────────────────────────────────────
+function RoleBadge({ role }: { role: UserRole }) {
+  return role === 'admin' ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-700 text-xs font-semibold">
+      <Shield className="w-3 h-3" /> Admin
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-500 text-xs font-medium">
+      <UserCheck className="w-3 h-3" /> User
+    </span>
+  );
+}
+
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+function StatusBadge({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold">
+      <CheckCircle2 className="w-3 h-3" /> Active
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 text-xs font-semibold">
+      <XCircle className="w-3 h-3" /> Inactive
+    </span>
+  );
+}
+
+// ─── Input helper ─────────────────────────────────────────────────────────────
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">{label}</label>
+      {children}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+const inputCls =
+  'w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-colors';
+
+// ─── Create User Modal ────────────────────────────────────────────────────────
+function CreateUserModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (user: UserProfile) => void;
+}) {
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', role: 'user' as UserRole });
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.detail || 'Failed to create user');
+      }
+      const created: UserProfile = await res.json();
+      onCreated(created);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-slate-700" />
+            <h2 className="text-base font-bold text-slate-900">Create New User</h2>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />{error}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="First Name">
+              <input className={inputCls} value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
+            </Field>
+            <Field label="Last Name">
+              <input className={inputCls} value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
+            </Field>
+          </div>
+          <Field label="Email">
+            <input type="email" className={inputCls} value={form.email} onChange={e => set('email', e.target.value)} required />
+          </Field>
+          <Field label="Password">
+            <div className="relative">
+              <input
+                type={showPw ? 'text' : 'password'}
+                className={`${inputCls} pr-10`}
+                value={form.password}
+                onChange={e => set('password', e.target.value)}
+                minLength={8}
+                required
+              />
+              <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700" onClick={() => setShowPw(v => !v)}>
+                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </Field>
+          <Field label="Role">
+            <div className="relative">
+              <select className={`${inputCls} appearance-none pr-8`} value={form.role} onChange={e => set('role', e.target.value)}>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </Field>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+              Create User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit User Modal ──────────────────────────────────────────────────────────
+function EditUserModal({
+  user,
+  onClose,
+  onUpdated,
+}: {
+  user: UserProfile;
+  onClose: () => void;
+  onUpdated: (u: UserProfile) => void;
+}) {
+  // Section 1 — Basic Info
+  const [info, setInfo] = useState({ first_name: user.first_name, last_name: user.last_name, email: user.email, role: user.role });
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [infoMsg, setInfoMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  // Section 2 — Password reset
+  const [pw, setPw] = useState({ new_password: '', confirm: '' });
+  const [showPw, setShowPw] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwMsg, setPwMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  // Section 3 — Status
+  const [isActive, setIsActive] = useState(user.is_active);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  const setInfoField = (k: string, v: string) => setInfo(f => ({ ...f, [k]: v }));
+
+  const handleInfoSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInfoLoading(true); setInfoMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${user.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ first_name: info.first_name, last_name: info.last_name, email: info.email, role: info.role }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Update failed'); }
+      const updated: UserProfile = await res.json();
+      onUpdated(updated);
+      setInfoMsg({ type: 'ok', text: 'Profile updated successfully.' });
+    } catch (err: any) {
+      setInfoMsg({ type: 'err', text: err.message });
+    } finally { setInfoLoading(false); }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pw.new_password !== pw.confirm) { setPwMsg({ type: 'err', text: 'Passwords do not match.' }); return; }
+    setPwLoading(true); setPwMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${user.id}/reset-password`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ new_password: pw.new_password }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Reset failed'); }
+      setPwMsg({ type: 'ok', text: 'Password reset successfully.' });
+      setPw({ new_password: '', confirm: '' });
+    } catch (err: any) {
+      setPwMsg({ type: 'err', text: err.message });
+    } finally { setPwLoading(false); }
+  };
+
+  const handleToggleStatus = async () => {
+    setStatusLoading(true); setStatusMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${user.id}/toggle-status`, {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Toggle failed'); }
+      const updated: UserProfile = await res.json();
+      setIsActive(updated.is_active);
+      onUpdated(updated);
+      setStatusMsg({ type: 'ok', text: `User is now ${updated.is_active ? 'active' : 'inactive'}.` });
+    } catch (err: any) {
+      setStatusMsg({ type: 'err', text: err.message });
+    } finally { setStatusLoading(false); }
+  };
+
+  const Msg = ({ m }: { m: { type: 'ok' | 'err'; text: string } | null }) =>
+    m ? (
+      <p className={`text-xs mt-2 flex items-center gap-1 ${m.type === 'ok' ? 'text-emerald-700' : 'text-red-600'}`}>
+        {m.type === 'ok' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+        {m.text}
+      </p>
+    ) : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Edit User</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{user.first_name} {user.last_name} · {user.email}</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-6 space-y-6">
+          {/* ── Section 1: Basic Info ── */}
+          <section className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
+              <Edit2 className="w-3.5 h-3.5 text-slate-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Basic Information</span>
+            </div>
+            <form onSubmit={handleInfoSave} className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="First Name">
+                  <input className={inputCls} value={info.first_name} onChange={e => setInfoField('first_name', e.target.value)} required />
+                </Field>
+                <Field label="Last Name">
+                  <input className={inputCls} value={info.last_name} onChange={e => setInfoField('last_name', e.target.value)} required />
+                </Field>
+              </div>
+              <Field label="Email">
+                <input type="email" className={inputCls} value={info.email} onChange={e => setInfoField('email', e.target.value)} required />
+              </Field>
+              <Field label="Role">
+                <div className="relative">
+                  <select className={`${inputCls} appearance-none pr-8`} value={info.role} onChange={e => setInfoField('role', e.target.value)}>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+              </Field>
+              <div className="flex items-center justify-between pt-1">
+                <Msg m={infoMsg} />
+                <button
+                  type="submit"
+                  disabled={infoLoading}
+                  className="ml-auto px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                >
+                  {infoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Save Changes
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* ── Section 2: Reset Password ── */}
+          <section className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
+              <Key className="w-3.5 h-3.5 text-slate-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Reset Password</span>
+            </div>
+            <form onSubmit={handlePasswordReset} className="p-4 space-y-3">
+              <Field label="New Password">
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    className={`${inputCls} pr-10`}
+                    value={pw.new_password}
+                    onChange={e => setPw(p => ({ ...p, new_password: e.target.value }))}
+                    minLength={8}
+                    required
+                  />
+                  <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700" onClick={() => setShowPw(v => !v)}>
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </Field>
+              <Field label="Confirm Password">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  className={inputCls}
+                  value={pw.confirm}
+                  onChange={e => setPw(p => ({ ...p, confirm: e.target.value }))}
+                  required
+                />
+              </Field>
+              <div className="flex items-center justify-between pt-1">
+                <Msg m={pwMsg} />
+                <button
+                  type="submit"
+                  disabled={pwLoading}
+                  className="ml-auto px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                >
+                  {pwLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />} Reset Password
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* ── Section 3: Status Toggle ── */}
+          <section className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
+              <ToggleLeft className="w-3.5 h-3.5 text-slate-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Account Status</span>
+            </div>
+            <div className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Current Status</p>
+                <div className="mt-1"><StatusBadge active={isActive} /></div>
+                <Msg m={statusMsg} />
+              </div>
+              <button
+                type="button"
+                disabled={statusLoading}
+                onClick={handleToggleStatus}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors disabled:opacity-60 ${
+                  isActive
+                    ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                }`}
+              >
+                {statusLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isActive ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                {isActive ? 'Deactivate' : 'Activate'}
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Delete Confirm Dialog ─────────────────────────────────────────────────────
+function DeleteConfirmDialog({
+  user,
+  onClose,
+  onDeleted,
+}: {
+  user: UserProfile;
+  onClose: () => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${user.id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (res.status === 204 || res.ok) {
+        onDeleted(user.id);
+      } else {
+        const d = await res.json();
+        throw new Error(d.detail || 'Delete failed');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-center w-12 h-12 bg-red-50 border border-red-200 rounded-full mx-auto mb-4">
+          <Trash2 className="w-5 h-5 text-red-600" />
+        </div>
+        <h2 className="text-base font-bold text-slate-900 text-center">Delete User</h2>
+        <p className="text-sm text-slate-500 text-center mt-2">
+          Are you sure you want to permanently delete{' '}
+          <span className="font-semibold text-slate-800">{user.first_name} {user.last_name}</span>?
+          This action cannot be undone.
+        </p>
+        {error && (
+          <div className="mt-3 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 text-center">{error}</div>
+        )}
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={loading}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
+export function AdminDashboardView() {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editUser, setEditUser] = useState<UserProfile | null>(null);
+  const [deleteUser, setDeleteUser] = useState<UserProfile | null>(null);
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users`, { headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data: UserProfile[] = await res.json();
+      setUsers(data);
+    } catch (err: any) {
+      setFetchError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  // Derived stats
+  const totalUsers = users.length;
+  const activeUsers = users.filter(u => u.is_active).length;
+  const inactiveUsers = totalUsers - activeUsers;
+
+  // Filtered rows
+  const filtered = users.filter(u => {
+    const q = searchQuery.toLowerCase();
+    const matchesQ = !q || `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(q);
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && u.is_active) ||
+      (statusFilter === 'inactive' && !u.is_active);
+    return matchesQ && matchesStatus;
+  });
+
+  const handleCreated = (u: UserProfile) => {
+    setUsers(prev => [u, ...prev]);
+    setIsCreateOpen(false);
+  };
+
+  const handleUpdated = (u: UserProfile) => {
+    setUsers(prev => prev.map(x => x.id === u.id ? u : x));
+  };
+
+  const handleDeleted = (id: string) => {
+    setUsers(prev => prev.filter(x => x.id !== id));
+    setDeleteUser(null);
+  };
+
+  return (
+    <>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">User Management</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage platform users, roles, and access control.</p>
+          </div>
+          <button
+            id="btn-create-user"
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm flex-shrink-0"
+          >
+            <UserPlus className="w-4 h-4" /> New User
+          </button>
+        </div>
+
+        {/* Stats bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+          <StatCard label="Total Users" value={loading ? '—' : totalUsers} icon={Users} />
+          <StatCard label="Active" value={loading ? '—' : activeUsers} icon={CheckCircle2} accent />
+          <StatCard label="Inactive" value={loading ? '—' : inactiveUsers} icon={XCircle} danger />
+        </div>
+
+        {/* Table card */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+          {/* Toolbar */}
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                id="search-users"
+                type="text"
+                placeholder="Search by name or email…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-colors"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                id="filter-status"
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value as any)}
+                className="pl-9 pr-8 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 appearance-none text-slate-700 font-medium transition-colors"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Table */}
+          {fetchError ? (
+            <div className="px-6 py-16 flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mb-3">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700">Failed to load users</p>
+              <p className="text-xs text-slate-500 mt-1">{fetchError}</p>
+              <button onClick={fetchUsers} className="mt-4 px-4 py-2 text-sm font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                Retry
+              </button>
+            </div>
+          ) : loading ? (
+            <div className="px-6 py-16 flex flex-col items-center">
+              <Loader2 className="w-6 h-6 text-slate-400 animate-spin mb-3" />
+              <p className="text-sm text-slate-500">Loading users…</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-6 py-16 flex flex-col items-center">
+              <Users className="w-8 h-8 text-slate-300 mb-3" />
+              <p className="text-sm font-semibold text-slate-600">No users found</p>
+              <p className="text-xs text-slate-400 mt-1">Try adjusting your search or filters.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" id="users-table">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Credits</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map(u => (
+                    <tr key={u.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
+                            {u.first_name[0]}{u.last_name[0]}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{u.first_name} {u.last_name}</p>
+                            <p className="text-xs text-slate-500">{u.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4"><RoleBadge role={u.role} /></td>
+                      <td className="px-6 py-4"><StatusBadge active={u.is_active} /></td>
+                      <td className="px-6 py-4 text-slate-700 font-medium">{u.available_credits.toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            id={`btn-edit-${u.id}`}
+                            onClick={() => setEditUser(u)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-300 rounded-md hover:bg-slate-100 transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            id={`btn-delete-${u.id}`}
+                            onClick={() => setDeleteUser(u)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                <p className="text-xs text-slate-500">
+                  Showing <span className="font-semibold text-slate-700">{filtered.length}</span> of <span className="font-semibold text-slate-700">{totalUsers}</span> users
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      {isCreateOpen && <CreateUserModal onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} />}
+      {editUser && (
+        <EditUserModal
+          user={editUser}
+          onClose={() => setEditUser(null)}
+          onUpdated={u => { handleUpdated(u); setEditUser(u); }}
+        />
+      )}
+      {deleteUser && (
+        <DeleteConfirmDialog
+          user={deleteUser}
+          onClose={() => setDeleteUser(null)}
+          onDeleted={handleDeleted}
+        />
+      )}
+    </>
+  );
+}

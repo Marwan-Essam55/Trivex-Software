@@ -1,9 +1,11 @@
+import models
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from controllers.video_controller import router as video_router
 from controllers.auth_controller import router as auth_router
 from controllers.user_controller import router as user_router
+from controllers.admin_user_controller import router as admin_user_router
 
 app = FastAPI(title="Trivex API", version="1.0.0")
 
@@ -21,4 +23,5 @@ def read_root():
 
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(admin_user_router)
 app.include_router(video_router)

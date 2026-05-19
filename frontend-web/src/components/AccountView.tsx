@@ -1,10 +1,13 @@
 import { User, Mail, Shield, Settings, Key, Bell, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface AccountViewProps {
-  onLogout: () => void;
-}
+export function AccountView() {
+  const navigate = useNavigate();
 
-export function AccountView({ onLogout }: AccountViewProps) {
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    navigate('/login');
+  };
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans w-full">
       <div className="mb-8">
@@ -109,7 +112,7 @@ export function AccountView({ onLogout }: AccountViewProps) {
             <h3 className="text-lg font-bold text-red-700 mb-2">Danger Zone</h3>
             <p className="text-sm text-slate-600 mb-6">Terminate your session and revoke active tokens from this device.</p>
             <button 
-              onClick={onLogout}
+              onClick={handleLogout}
               className="flex items-center justify-center px-6 py-2 border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 font-semibold rounded-lg text-sm transition-colors"
             >
               <LogOut className="w-4 h-4 mr-2" />
