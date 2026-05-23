@@ -17,6 +17,8 @@ class Video(Base):
     id = Column(Uuid, primary_key=True, default=uuid.uuid4, index=True)
     user_id = Column(Uuid, ForeignKey("users.id"), nullable=False)
     file_path = Column(String, nullable=False)
+    cloudinary_public_id = Column(String, nullable=True)
+    original_filename = Column(String, nullable=True)
     file_size_mb = Column(Float, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
     status = Column(SQLEnum(VideoStatus), default=VideoStatus.PENDING)

@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 client = TestClient(app)
 
 def run_tests():
-    # 1. Login as admin
     logger.info("1. Logging in as admin...")
     response = client.post(
         "/auth/login",
@@ -22,7 +21,6 @@ def run_tests():
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
     logger.info("-> Admin login successful")
 
-    # 2. Create a user
     logger.info("2. Creating a new user via admin route...")
     new_user_data = {
         "first_name": "Test",
@@ -36,20 +34,17 @@ def run_tests():
         headers=admin_headers
     )
     if response.status_code == 400 and response.json().get("detail") == "Email already registered":
-        # Delete it first if it exists from a previous run
         logger.info("User already exists, attempting to fetch and delete...")
         users_resp = client.get("/admin/users/", headers=admin_headers)
         for u in users_resp.json():
             if u["email"] == "testuser@example.com":
                 client.delete(f"/admin/users/{u['id']}", headers=admin_headers)
-        # Try creating again
         response = client.post("/admin/users/", json=new_user_data, headers=admin_headers)
         
     assert response.status_code == 201, f"Failed to create user: {response.json()}"
     user_id = response.json()["id"]
     logger.info(f"-> User created successfully: {user_id}")
 
-    # 3. Log in as that user
     logger.info("3. Logging in as the new user...")
     response = client.post(
         "/auth/login",
@@ -60,13 +55,11 @@ def run_tests():
     user_headers = {"Authorization": f"Bearer {user_token}"}
     logger.info("-> User login successful")
 
-    # 4. Try to hit admin routes as standard user (should 403)
     logger.info("4. Hitting admin route as standard user...")
     response = client.get("/admin/users/", headers=user_headers)
     assert response.status_code == 403, f"Expected 403, got {response.status_code}"
     logger.info("-> Properly blocked with 403")
 
-    # 5. Try Google login with a known email
     logger.info("5. Testing Google login with known email...")
     with patch("services.auth_service.id_token.verify_oauth2_token") as mock_verify:
         mock_verify.return_value = {
@@ -80,7 +73,6 @@ def run_tests():
         assert response.status_code == 200, f"Google login failed: {response.json()}"
         logger.info("-> Google login with known email successful")
 
-    # 6. Try Google login with unknown email
     logger.info("6. Testing Google login with unknown email...")
     with patch("services.auth_service.id_token.verify_oauth2_token") as mock_verify:
         mock_verify.return_value = {
@@ -95,7 +87,6 @@ def run_tests():
         assert "not registered on this platform" in response.json()["detail"]
         logger.info("-> Google login with unknown email correctly blocked (403)")
 
-    # 7. Deactivate user and verify they can't log in
     logger.info("7. Deactivating user and testing login...")
     response = client.post(f"/admin/users/{user_id}/toggle-status", headers=admin_headers)
     assert response.status_code == 200
@@ -109,7 +100,6 @@ def run_tests():
     assert "inactive" in response.json()["detail"].lower()
     logger.info("-> Deactivated user login blocked correctly (403)")
     
-    # 8. Test input validation (short password)
     logger.info("8. Testing input validation for short password...")
     response = client.post(
         "/admin/users/",
@@ -124,7 +114,7 @@ def run_tests():
     assert response.status_code == 422, f"Expected 422 for validation error, got {response.status_code}"
     logger.info("-> Input validation working properly (422)")
 
-    # Cleanup
+
     logger.info("9. Cleaning up...")
     client.delete(f"/admin/users/{user_id}", headers=admin_headers)
     logger.info("-> Cleanup complete. All tests passed successfully!")

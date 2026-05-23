@@ -7,7 +7,7 @@ import {
 
 const API_BASE = 'http://localhost:8000';
 
-type UserRole = 'admin' | 'user';
+type UserRole = 'ADMIN' | 'USER' | 'admin' | 'user';
 
 interface UserProfile {
   id: string;
@@ -28,7 +28,6 @@ function authHeaders() {
   };
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({
   label, value, icon: Icon, accent = false, danger = false,
 }: {
@@ -56,9 +55,9 @@ function StatCard({
   );
 }
 
-// ─── Role Badge ───────────────────────────────────────────────────────────────
 function RoleBadge({ role }: { role: UserRole }) {
-  return role === 'admin' ? (
+  const isAdmin = role.toUpperCase() === 'ADMIN';
+  return isAdmin ? (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-700 text-xs font-semibold">
       <Shield className="w-3 h-3" /> Admin
     </span>
@@ -69,7 +68,6 @@ function RoleBadge({ role }: { role: UserRole }) {
   );
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ active }: { active: boolean }) {
   return active ? (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold">
@@ -82,7 +80,6 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
-// ─── Input helper ─────────────────────────────────────────────────────────────
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
@@ -96,7 +93,6 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 const inputCls =
   'w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-colors';
 
-// ─── Create User Modal ────────────────────────────────────────────────────────
 function CreateUserModal({
   onClose,
   onCreated,
@@ -104,7 +100,7 @@ function CreateUserModal({
   onClose: () => void;
   onCreated: (user: UserProfile) => void;
 }) {
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', role: 'user' as UserRole });
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', role: 'USER' as UserRole });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,10 +112,11 @@ function CreateUserModal({
     setLoading(true);
     setError(null);
     try {
+      const payload = { ...form, role: form.role.toUpperCase() };
       const res = await fetch(`${API_BASE}/admin/users`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -180,9 +177,9 @@ function CreateUserModal({
           </Field>
           <Field label="Role">
             <div className="relative">
-              <select className={`${inputCls} appearance-none pr-8`} value={form.role} onChange={e => set('role', e.target.value)}>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
+              <select className={`${inputCls} appearance-none pr-8`} value={form.role.toUpperCase()} onChange={e => set('role', e.target.value)}>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
@@ -206,7 +203,6 @@ function CreateUserModal({
   );
 }
 
-// ─── Edit User Modal ──────────────────────────────────────────────────────────
 function EditUserModal({
   user,
   onClose,
@@ -216,18 +212,15 @@ function EditUserModal({
   onClose: () => void;
   onUpdated: (u: UserProfile) => void;
 }) {
-  // Section 1 — Basic Info
   const [info, setInfo] = useState({ first_name: user.first_name, last_name: user.last_name, email: user.email, role: user.role });
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoMsg, setInfoMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
-  // Section 2 — Password reset
   const [pw, setPw] = useState({ new_password: '', confirm: '' });
   const [showPw, setShowPw] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
   const [pwMsg, setPwMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
-  // Section 3 — Status
   const [isActive, setIsActive] = useState(user.is_active);
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -241,7 +234,7 @@ function EditUserModal({
       const res = await fetch(`${API_BASE}/admin/users/${user.id}`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ first_name: info.first_name, last_name: info.last_name, email: info.email, role: info.role }),
+        body: JSON.stringify({ first_name: info.first_name, last_name: info.last_name, email: info.email, role: info.role.toUpperCase() }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Update failed'); }
       const updated: UserProfile = await res.json();
@@ -329,9 +322,9 @@ function EditUserModal({
               </Field>
               <Field label="Role">
                 <div className="relative">
-                  <select className={`${inputCls} appearance-none pr-8`} value={info.role} onChange={e => setInfoField('role', e.target.value)}>
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                  <select className={`${inputCls} appearance-none pr-8`} value={info.role.toUpperCase()} onChange={e => setInfoField('role', e.target.value)}>
+                    <option value="USER">User</option>
+                    <option value="ADMIN">Admin</option>
                   </select>
                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
@@ -393,7 +386,6 @@ function EditUserModal({
             </form>
           </section>
 
-          {/* ── Section 3: Status Toggle ── */}
           <section className="border border-slate-200 rounded-lg overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
               <ToggleLeft className="w-3.5 h-3.5 text-slate-600" />
@@ -426,7 +418,6 @@ function EditUserModal({
   );
 }
 
-// ─── Delete Confirm Dialog ─────────────────────────────────────────────────────
 function DeleteConfirmDialog({
   user,
   onClose,
@@ -492,7 +483,6 @@ function DeleteConfirmDialog({
   );
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
 export function AdminDashboardView() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -522,12 +512,10 @@ export function AdminDashboardView() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // Derived stats
   const totalUsers = users.length;
   const activeUsers = users.filter(u => u.is_active).length;
   const inactiveUsers = totalUsers - activeUsers;
 
-  // Filtered rows
   const filtered = users.filter(u => {
     const q = searchQuery.toLowerCase();
     const matchesQ = !q || `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(q);
@@ -555,7 +543,6 @@ export function AdminDashboardView() {
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">User Management</h1>
@@ -570,16 +557,13 @@ export function AdminDashboardView() {
           </button>
         </div>
 
-        {/* Stats bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
           <StatCard label="Total Users" value={loading ? '—' : totalUsers} icon={Users} />
           <StatCard label="Active" value={loading ? '—' : activeUsers} icon={CheckCircle2} accent />
           <StatCard label="Inactive" value={loading ? '—' : inactiveUsers} icon={XCircle} danger />
         </div>
 
-        {/* Table card */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          {/* Toolbar */}
           <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -608,7 +592,6 @@ export function AdminDashboardView() {
             </div>
           </div>
 
-          {/* Table */}
           {fetchError ? (
             <div className="px-6 py-16 flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mb-3">

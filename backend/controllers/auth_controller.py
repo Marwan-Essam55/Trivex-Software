@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
-from schemas.user_schema import UserCreate, UserProfileResponse, Token, GoogleAuthToken
+from schemas.user_schema import RegisterUser, UserProfileResponse, Token, GoogleAuthToken
 from services import user_service, auth_service
-from core.security import get_db, get_current_user
+from database.session import get_db
+from core.security import get_current_user
 
 router = APIRouter(
     prefix="/auth",
@@ -11,11 +12,11 @@ router = APIRouter(
 )
 
 @router.post("/register", response_model=UserProfileResponse, status_code=status.HTTP_201_CREATED)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
+def register_user(user: RegisterUser, db: Session = Depends(get_db)):
     db_user = user_service.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    return user_service.create_user(db=db, user=user)
+    return user_service.create_registered_user(db=db, user=user)
 
 @router.post("/login", response_model=Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -45,3 +46,4 @@ def logout():
     want to add server-side token invalidation (e.g. blocklist) later.
     """
     return {"message": "Successfully logged out. Please remove the token from your client."}
+

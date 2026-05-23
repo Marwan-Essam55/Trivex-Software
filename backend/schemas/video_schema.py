@@ -16,11 +16,14 @@ class AnalysisResultResponse(BaseModel):
 
 class VideoResponse(BaseModel):
     id: UUID
+    file_path: str
+    cloudinary_public_id: Optional[str] = None
+    original_filename: Optional[str] = None
     file_size_mb: Optional[float] = None
     duration_seconds: Optional[int] = None
     status: VideoStatus
     uploaded_at: datetime
-    
+
     class Config:
         orm_mode = True
-        from_attributes = True
+        from_attributes = True

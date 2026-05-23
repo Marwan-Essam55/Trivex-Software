@@ -6,7 +6,17 @@ from controllers.video_controller import router as video_router
 from controllers.auth_controller import router as auth_router
 from controllers.user_controller import router as user_router
 from controllers.admin_user_controller import router as admin_user_router
+import cloudinary
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 app = FastAPI(title="Trivex API", version="1.0.0")
 
 app.add_middleware(

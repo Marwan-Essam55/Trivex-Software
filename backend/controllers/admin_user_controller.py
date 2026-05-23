@@ -10,7 +10,7 @@ from core.security import get_db, get_current_admin_user
 router = APIRouter(
     prefix="/admin/users",
     tags=["Admin User Management"],
-    dependencies=[Depends(get_current_admin_user)]  # Route-level enforcement
+    dependencies=[Depends(get_current_admin_user)]  
 )
 
 @router.post("/", response_model=UserProfileResponse, status_code=status.HTTP_201_CREATED)

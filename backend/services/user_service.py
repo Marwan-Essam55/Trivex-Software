@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from models.user import User
-from schemas.user_schema import UserCreate, UserUpdate
+from models.user import User, UserRole
+from schemas.user_schema import UserCreate, UserUpdate, RegisterUser, UserOwnProfileUpdate
 from core.security import get_password_hash
 import uuid
 
@@ -24,6 +24,21 @@ def create_user(db: Session, user: UserCreate):
     db.refresh(db_user)
     return db_user
 
+def create_registered_user(db: Session, user: RegisterUser):
+    """Create a user from self-registration — always USER role."""
+    hashed_password = get_password_hash(user.password)
+    db_user = User(
+        first_name=user.first_name,
+        last_name=user.last_name,
+        email=user.email.lower(),
+        hashed_password=hashed_password,
+        role=UserRole.USER
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
 def get_all_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
 
@@ -31,6 +46,16 @@ def update_user(db: Session, db_user: User, user_in: UserUpdate):
     update_data = user_in.dict(exclude_unset=True)
     if 'email' in update_data and update_data['email']:
         update_data['email'] = update_data['email'].lower()
+    for field in update_data:
+        setattr(db_user, field, update_data[field])
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def update_own_profile(db: Session, db_user: User, profile_in: UserOwnProfileUpdate):
+    """Update a user's own profile — restricted to first_name and last_name only."""
+    update_data = profile_in.dict(exclude_unset=True)
     for field in update_data:
         setattr(db_user, field, update_data[field])
     db.add(db_user)
@@ -57,3 +82,4 @@ def toggle_user_status(db: Session, db_user: User):
     db.commit()
     db.refresh(db_user)
     return db_user
+
