@@ -21,6 +21,7 @@ export default function DashboardView() {
       setVideos(data);
     } catch (err: any) {
       console.error('Failed to load dashboard data:', err);
+      Alert.alert('Error', err.message || 'Failed to load dashboard data.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -45,9 +46,13 @@ export default function DashboardView() {
 
       if (result.canceled) return;
 
-      const selectedAsset = result.assets[0];
-      if (selectedAsset) {
-        uploadFile(selectedAsset);
+      const file = result.assets[0];
+      if (file) {
+        uploadFile({
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || 'video/mp4',
+        });
       }
     } catch (err) {
       console.error(err);
@@ -55,16 +60,16 @@ export default function DashboardView() {
     }
   };
 
-  const uploadFile = async (asset: DocumentPicker.DocumentPickerAsset) => {
+  const uploadFile = async (file: { uri: string; name: string; type: string }) => {
     setUploading(true);
     setUploadProgress('Uploading file to Trivex workspace...');
 
     try {
       const formData = new FormData();
       formData.append('file', {
-        uri: asset.uri,
-        type: asset.mimeType || 'video/mp4',
-        name: asset.name,
+        uri: file.uri,
+        name: file.name,
+        type: file.type,
       } as any);
 
       await apiFetch('/api/videos/upload', {
@@ -72,7 +77,7 @@ export default function DashboardView() {
         body: formData,
       });
 
-      Alert.alert('Upload Successful', `${asset.name} has been uploaded and queued for clinical analysis.`);
+      Alert.alert('Upload Successful', `${file.name} has been uploaded and queued for clinical analysis.`);
       fetchDashboardData(true);
     } catch (err: any) {
       console.error(err);
@@ -117,7 +122,7 @@ export default function DashboardView() {
 
     return {
       id: v.id,
-      name: v.filename,
+      name: v.original_filename || v.filename || 'Untitled Ingestion',
       date: formattedDate,
       status: statusDisplay,
       statusColor,

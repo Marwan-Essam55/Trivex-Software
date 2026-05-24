@@ -13,7 +13,7 @@ export const unstable_settings = {
 };
 
 function NavigationGuard() {
-  const { token, isLoading } = useAuth();
+  const { token, user, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -22,6 +22,8 @@ function NavigationGuard() {
 
     // Check if the user is currently inside the 'auth' route group
     const inAuthGroup = segments[0] === 'auth';
+    const inTabsGroup = segments[0] === '(tabs)';
+    const currentTab = segments[1]; // e.g. 'index', 'history', 'admin', 'account'
 
     if (!token && !inAuthGroup) {
       // If the user has no token and is NOT on the landing index screen, redirect to login
@@ -32,8 +34,21 @@ function NavigationGuard() {
     } else if (token && inAuthGroup) {
       // If the user has an active token and is on the login/auth page, redirect them to dashboard
       router.replace('/(tabs)');
+    } else if (token && inTabsGroup && user) {
+      // Role-based enforcement within tabs
+      const role = (user.role || 'USER').toUpperCase();
+      const isAdmin = role === 'ADMIN';
+
+      // If ADMIN is on user-only tabs (index/dashboard, history), redirect to admin tab
+      if (isAdmin && (currentTab === 'index' || currentTab === 'history')) {
+        router.replace('/(tabs)/admin');
+      }
+      // If USER is on admin tab, redirect to user dashboard
+      if (!isAdmin && currentTab === 'admin') {
+        router.replace('/(tabs)');
+      }
     }
-  }, [token, isLoading, segments, router]);
+  }, [token, user, isLoading, segments, router]);
 
   if (isLoading) {
     return (

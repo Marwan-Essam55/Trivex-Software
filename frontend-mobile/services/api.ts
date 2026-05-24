@@ -112,8 +112,9 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Do not overwrite Content-Type if uploading multipart FormData
-  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+  if (options.body instanceof FormData) {
+    delete (headers as Record<string, string>)['Content-Type'];
+  } else if (!headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -124,7 +125,13 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(errorBody.detail || `Request failed with status ${response.status}`);
+    const statusPrefix = (response.status === 401 || response.status === 403) ? `${response.status}: ` : '';
+    throw new Error(statusPrefix + (errorBody.detail || `Request failed with status ${response.status}`));
+  }
+
+  // Handle 204 No Content (e.g. DELETE responses)
+  if (response.status === 204) {
+    return null;
   }
 
   return await response.json();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, CheckCircle2, Clock, Filter, Video, AlertTriangle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -21,7 +21,9 @@ export default function HistoryView() {
       setHistoryData(data);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to load analysis archive.');
+      const errMsg = err.message || 'Failed to load analysis archive.';
+      setError(errMsg);
+      Alert.alert('Error', errMsg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -43,16 +45,15 @@ export default function HistoryView() {
 
   // Filter history based on search query
   const filteredHistory = historyData.filter(item => 
-    (item.filename || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.primary_assessment || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (item.original_filename || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      if (!dateString) return 'Pending';
+      return new Date(dateString).toLocaleDateString();
     } catch {
-      return dateString;
+      return 'Pending';
     }
   };
 
@@ -112,9 +113,8 @@ export default function HistoryView() {
         ) : (
           <View className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
             {filteredHistory.map((item, index) => {
-              const statusDisplay = item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1).toLowerCase() : 'Pending';
-              const reliabilityPct = item.assessment_reliability ? `${Math.round(item.assessment_reliability * 100)}%` : '-';
-              const emotionText = item.primary_assessment || (statusDisplay === 'Completed' ? 'Neutral Baseline' : 'Pending');
+              const status = item.status || 'PENDING';
+              const statusDisplay = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 
               return (
                 <TouchableOpacity 
@@ -130,25 +130,8 @@ export default function HistoryView() {
                   </View>
 
                   <View className="flex-1 justify-center space-y-1">
-                    <Text className="text-sm font-semibold text-slate-900" numberOfLines={1}>{item.filename}</Text>
+                    <Text className="text-sm font-semibold text-slate-900" numberOfLines={1}>{item.original_filename || 'Untitled Ingestion'}</Text>
                     
-                    <View className="flex-row items-center justify-between mt-1">
-                      <View className={`px-2 py-0.5 rounded border ${
-                        emotionText === 'Confident Engagement' ? 'bg-emerald-50 border-emerald-200' :
-                        emotionText === 'Pending' ? 'bg-slate-50 border-slate-200' :
-                        emotionText === 'High Stress' ? 'bg-amber-50 border-amber-200' :
-                        'bg-indigo-50 border-indigo-200'
-                      }`}>
-                        <Text className={`text-[10px] font-semibold ${
-                          emotionText === 'Confident Engagement' ? 'text-emerald-700' :
-                          emotionText === 'Pending' ? 'text-slate-600' :
-                          emotionText === 'High Stress' ? 'text-amber-700' :
-                          'text-indigo-700'
-                        }`}>{emotionText}</Text>
-                      </View>
-                      <Text className="text-xs font-mono font-semibold text-slate-900">{reliabilityPct}</Text>
-                    </View>
-
                     <View className="flex-row items-center justify-between mt-1.5">
                       <Text className="text-xs font-mono text-slate-500">{formatDate(item.uploaded_at)}</Text>
                       <View className="flex-row items-center">

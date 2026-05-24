@@ -2,12 +2,17 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 
-import { Activity, Clock, User } from 'lucide-react-native';
+import { Activity, Clock, User, Shield } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { user } = useAuth();
+
+  const role = (user?.role || 'USER').toUpperCase();
+  const isAdmin = role === 'ADMIN';
 
   return (
     <Tabs
@@ -22,17 +27,19 @@ export default function TabLayout() {
           },
         }),
       }}>
+      {/* USER tabs: Dashboard, History — hidden for ADMIN */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
+          href: isAdmin ? null : '/(tabs)',
         }}
       />
       <Tabs.Screen
         name="fusion"
         options={{
-          href: null, // Hide from tab bar
+          href: null, // Always hidden from tab bar
         }}
       />
       <Tabs.Screen
@@ -40,8 +47,21 @@ export default function TabLayout() {
         options={{
           title: 'History',
           tabBarIcon: ({ color }) => <Clock size={24} color={color} />,
+          href: isAdmin ? null : '/(tabs)/history',
         }}
       />
+
+      {/* ADMIN tab: User Management — hidden for USER */}
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          tabBarIcon: ({ color }) => <Shield size={24} color={color} />,
+          href: isAdmin ? '/(tabs)/admin' : null,
+        }}
+      />
+
+      {/* Shared tab: Account — always visible */}
       <Tabs.Screen
         name="account"
         options={{
