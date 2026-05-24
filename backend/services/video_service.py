@@ -5,12 +5,12 @@ from fastapi import UploadFile
 from models.video import Video
 
 def upload_video_to_cloudinary(file: UploadFile):
-    """Upload a video file to Cloudinary and return (secure_url, file_size_mb, public_id, duration_seconds)."""
+    """Upload a video or audio file to Cloudinary and return (secure_url, file_size_mb, public_id, duration_seconds)."""
     result = cloudinary.uploader.upload(
         file.file,
-        resource_type="video",
+        resource_type="auto",
         folder="trivex_videos",
-        public_id=f"video_{uuid.uuid4().hex}",
+        public_id=f"media_{uuid.uuid4().hex}",
     )
 
     secure_url = result.get("secure_url")

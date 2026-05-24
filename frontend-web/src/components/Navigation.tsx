@@ -13,6 +13,7 @@ export function Navigation() {
 
   const handleSignOut = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
     navigate('/login');
   };
 

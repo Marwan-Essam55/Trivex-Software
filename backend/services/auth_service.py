@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from services.user_service import get_user_by_email
+from services.user_service import get_user_by_email, create_google_user
 from core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
@@ -36,9 +36,11 @@ def authenticate_user(db: Session, form_data: OAuth2PasswordRequestForm):
     return {"access_token": access_token, "token_type": "bearer"}
 
 def authenticate_google_user(db: Session, token: str):
+    print(f"[DEBUG] GOOGLE_CLIENT_ID loaded: '{settings.GOOGLE_CLIENT_ID}'")
     try:
         idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
-    except ValueError:
+    except Exception as e:
+        print(f"[ERROR] Google authentication token verification failed. Exception type: {type(e).__name__}, message: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Google authentication token",
@@ -46,6 +48,9 @@ def authenticate_google_user(db: Session, token: str):
     
     email = idinfo.get("email")
     google_id = idinfo.get("sub")
+    given_name = idinfo.get("given_name", "")
+    family_name = idinfo.get("family_name", "")
+    picture = idinfo.get("picture")
     
     if not email:
         raise HTTPException(
@@ -56,9 +61,14 @@ def authenticate_google_user(db: Session, token: str):
     user = get_user_by_email(db, email=email)
     
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This Google account is not registered on this platform. Please contact the administrator."
+        # Upsert: create a new user from Google profile data
+        user = create_google_user(
+            db=db,
+            email=email,
+            first_name=given_name or "Google",
+            last_name=family_name or "User",
+            google_id=google_id,
+            profile_picture_url=picture,
         )
         
     if not user.is_active:
@@ -67,6 +77,7 @@ def authenticate_google_user(db: Session, token: str):
             detail="User account is inactive",
         )
         
+    # Link google_id if existing user didn't have one
     if not user.google_id:
         user.google_id = google_id
         db.commit()

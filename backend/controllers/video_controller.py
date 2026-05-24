@@ -21,9 +21,9 @@ async def upload_video(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Upload a video file to Cloudinary and save metadata in the database."""
-    if not file.content_type or not file.content_type.startswith("video/"):
-        raise HTTPException(status_code=400, detail="File must be a video (mp4, mov, avi, etc.)")
+    """Upload a video or audio file to Cloudinary and save metadata in the database."""
+    if not file.content_type or not (file.content_type.startswith("video/") or file.content_type.startswith("audio/")):
+        raise HTTPException(status_code=400, detail="File must be a video (MP4, MOV, AVI) or audio (MP3, WAV).")
 
     try:
         secure_url, file_size_mb, public_id, duration = upload_video_to_cloudinary(file)

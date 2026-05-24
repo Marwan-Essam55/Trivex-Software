@@ -25,6 +25,7 @@ export function ProtectedRoute({ allowedRole }: ProtectedRouteProps) {
     // Check expiration
     if (decoded.exp < currentTime) {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
       return <Navigate to="/login" replace />;
     }
 
@@ -42,6 +43,7 @@ export function ProtectedRoute({ allowedRole }: ProtectedRouteProps) {
   } catch (err) {
     // Invalid token
     localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
     return <Navigate to="/login" replace />;
   }
 }

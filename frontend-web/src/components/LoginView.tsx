@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Activity, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-
+import { GoogleLogin } from '@react-oauth/google';
+import type { CredentialResponse } from '@react-oauth/google';
 export function LoginView() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +33,7 @@ export function LoginView() {
         
         try {
           const decoded: any = jwtDecode(data.access_token);
+          localStorage.setItem('user', JSON.stringify({ email: decoded.sub, role: decoded.role }));
           if (decoded.role === 'admin') {
             navigate('/dashboard/admin');
           } else {
@@ -45,6 +48,45 @@ export function LoginView() {
       }
     } catch (err) {
       setError('Network error connecting to the server.');
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    if (!credentialResponse.credential) {
+      setError('Google authentication failed. No credential received.');
+      return;
+    }
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:8000/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('access_token', data.access_token);
+        try {
+          const decoded: any = jwtDecode(data.access_token);
+          localStorage.setItem('user', JSON.stringify({ email: decoded.sub, role: decoded.role }));
+          if (decoded.role === 'admin') {
+            navigate('/dashboard/admin');
+          } else {
+            navigate('/dashboard/user');
+          }
+        } catch {
+          navigate('/dashboard/user');
+        }
+      } else {
+        const err = await response.json();
+        setError(err.detail || 'Google authentication failed.');
+      }
+    } catch {
+      setError('Network error connecting to the server.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -174,15 +216,26 @@ export function LoginView() {
               <div className="w-full border-t border-slate-200"></div>
             </div>
 
-            <button
-              type="button"
-              className="w-full flex items-center justify-center py-3 px-4 border border-slate-300 rounded-lg shadow-sm text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all duration-200"
-            >
-              <svg className="w-5 h-5 mr-2 text-slate-700" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 7.021 2 2.543 6.477 2.543 12s4.478 10 10.002 10c8.396 0 10.249-7.85 9.426-11.761h-9.426z" />
-              </svg>
-              SSO Login
-            </button>
+            <div className="flex justify-center" id="google-login-btn">
+              {googleLoading ? (
+                <div className="w-full flex items-center justify-center py-3 px-4 border border-slate-300 rounded-lg text-sm font-semibold text-slate-500 bg-slate-50">
+                  <svg className="animate-spin h-5 w-5 mr-2 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Authenticating…
+                </div>
+              ) : (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Google Sign-In was unsuccessful. Please try again.')}
+                  theme="outline"
+                  size="large"
+                  width="400"
+                  text="continue_with"
+                />
+              )}
+            </div>
           </form>
           
           <p className="mt-8 text-center text-xs text-slate-500">

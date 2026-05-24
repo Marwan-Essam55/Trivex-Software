@@ -52,8 +52,8 @@ export function UserDashboardView() {
   }, []);
 
   const handleFileSelect = (file: File) => {
-    if (!file.type.startsWith('video/')) {
-      setUploadError('Please select a video file (MP4, MOV, AVI).');
+    if (!file.type.startsWith('video/') && !file.type.startsWith('audio/')) {
+      setUploadError('Please select a video file (MP4, MOV, AVI) or audio file (MP3, WAV).');
       return;
     }
     if (file.size > 2 * 1024 * 1024 * 1024) {
@@ -198,7 +198,7 @@ export function UserDashboardView() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="video/*"
+          accept="video/*,audio/*"
           className="hidden"
           onChange={handleInputChange}
           id="video-file-input"
@@ -223,7 +223,7 @@ export function UserDashboardView() {
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">Ingest Media File</h3>
               <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
-                Drag and drop your asset here, or click to browse. Supported formats: MP4, MOV, AVI. Maximum size: 2GB.
+                Drag and drop your asset here, or click to browse. Supported formats: MP4, MOV, AVI, MP3, WAV. Maximum size: 2GB.
               </p>
               <button
                 type="button"

@@ -39,6 +39,23 @@ def create_registered_user(db: Session, user: RegisterUser):
     db.refresh(db_user)
     return db_user
 
+def create_google_user(db: Session, email: str, first_name: str, last_name: str, google_id: str, profile_picture_url: str = None):
+    """Create a new user from Google OAuth data. Uses a random placeholder password since the user will only authenticate via Google."""
+    placeholder_password = get_password_hash(str(uuid.uuid4()))
+    db_user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=email.lower(),
+        hashed_password=placeholder_password,
+        google_id=google_id,
+        profile_picture_url=profile_picture_url,
+        role=UserRole.USER,
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
 def get_all_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
 
