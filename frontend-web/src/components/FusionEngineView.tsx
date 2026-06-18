@@ -1,6 +1,6 @@
 import {
   Download, MessageSquare, Pause, Play, SkipBack, SkipForward,
-  Volume2, Maximize, ArrowLeft, Clock, FileVideo, Brain, Zap,
+  Volume2, Maximize, ArrowLeft, FileVideo, Brain, Zap,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRef, useState } from 'react';
@@ -29,14 +29,6 @@ interface TimelineSegment {
   intensity: number;
 }
 
-interface AcousticProfile {
-  tone_label: string;
-  pitch_hz: number;
-  cadence_wpm: number;
-  tone_clarity: number;
-  waveform: number[];
-}
-
 interface AnalysisResults {
   dominant_emotion: string | null;
   confidence_score: number | null;
@@ -44,8 +36,6 @@ interface AnalysisResults {
   nlp_summary: string | null;
   emotion_breakdown: EmotionBreakdown | null;
   experta_conclusions: ExpertaConclusion[] | null;
-  acoustic_profile: AcousticProfile | null;
-  kinematic_state: string | null;
   timeline_segments: TimelineSegment[] | null;
 }
 
@@ -167,33 +157,6 @@ function TimelineHeatmap({ segments, duration }: { segments: TimelineSegment[]; 
   );
 }
 
-/** Acoustic waveform from real 24-point array */
-function AcousticWaveform({ profile }: { profile: AcousticProfile }) {
-  const waveform = profile.waveform ?? Array(24).fill(0.5);
-  return (
-    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center">
-        <span className="w-2 h-2 rounded-sm bg-slate-400 mr-2" />
-        Acoustic Analysis
-      </h3>
-      <p className="text-[11px] text-slate-400 mb-3">
-        {profile.tone_label} · {profile.cadence_wpm} WPM · {Math.round(profile.tone_clarity * 100)}% clarity
-      </p>
-      <div className="h-24 flex items-end justify-center space-x-1">
-        {waveform.map((amp, i) => (
-          <div
-            key={i}
-            className="w-1.5 rounded-t-sm transition-all duration-300"
-            style={{
-              height: `${Math.max(8, amp * 100)}%`,
-              backgroundColor: amp > 0.7 ? '#0f172a' : '#e2e8f0',
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** Experta conclusions list */
 function ExpertaPanel({ conclusions }: { conclusions: ExpertaConclusion[] }) {
@@ -376,24 +339,6 @@ export function FusionEngineView() {
               <TimelineHeatmap segments={ar.timeline_segments} duration={duration} />
             )}
 
-            {/* Acoustic waveform + Kinematic */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {ar?.acoustic_profile && <AcousticWaveform profile={ar.acoustic_profile} />}
-
-              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center">
-                  <span className="w-2 h-2 rounded-sm bg-slate-900 mr-2" />
-                  Kinematic Skeleton
-                </h3>
-                <div className="h-24 bg-slate-50 rounded-md border border-slate-200 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px)', backgroundSize: '10px 10px' }} />
-                  <div className="text-slate-500 font-mono text-xs uppercase font-bold flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    State: {ar?.kinematic_state ?? 'Open'}
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* Emotion breakdown bars */}
             {ar?.emotion_breakdown && (

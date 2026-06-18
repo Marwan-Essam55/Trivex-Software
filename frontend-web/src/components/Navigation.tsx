@@ -36,7 +36,7 @@ export function Navigation() {
           <div className="flex items-center">
             <Link to={dashboardPath} className="flex-shrink-0 flex items-center cursor-pointer">
               <Activity className="h-6 w-6 text-teal-600 animate-pulse" />
-              <span className="ml-2 font-bold text-xl text-slate-900 tracking-wider uppercase">Trivex</span>
+              <span className="ml-2 font-bold text-xl text-slate-900 tracking-wider uppercase">TriVex</span>
             </Link>
             <div className="hidden sm:ml-10 sm:flex sm:space-x-8">
               <Link

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { UploadCloud, Video, BarChart3, Activity, CheckCircle2, Clock, PlayCircle, Loader2, AlertTriangle, X, FileVideo } from 'lucide-react';
+import { UploadCloud, Video, BarChart3, Activity, CheckCircle2, Clock, PlayCircle, Loader2, AlertTriangle, X, FileVideo, Square, CameraOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:8000';
@@ -26,11 +26,20 @@ type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 export function UserDashboardView() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const webcamVideoRef = useRef<HTMLVideoElement>(null);
+  const activeStreamRef = useRef<MediaStream | null>(null);
 
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   const [recentVideos, setRecentVideos] = useState<VideoRecord[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
@@ -50,6 +59,14 @@ export function UserDashboardView() {
     };
     fetchVideos();
   }, []);
+
+  // ── Webcam preview: wire the stream to the <video> element AFTER React
+  //    has rendered it (isRecording flips true → re-render → ref is valid).
+  useEffect(() => {
+    if (isRecording && webcamVideoRef.current && activeStreamRef.current) {
+      webcamVideoRef.current.srcObject = activeStreamRef.current;
+    }
+  }, [isRecording]);
 
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith('video/') && !file.type.startsWith('audio/')) {
@@ -129,6 +146,91 @@ export function UserDashboardView() {
     setUploadState('idle');
     setSelectedFile(null);
     setUploadError(null);
+  };
+
+  const fmtRecordingTime = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const startRecording = async () => {
+    setRecordingError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      recordedChunksRef.current = [];
+
+      // Prefer webm/vp9, fallback to whatever the browser supports
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+        ? 'video/webm;codecs=vp9,opus'
+        : MediaRecorder.isTypeSupported('video/webm')
+        ? 'video/webm'
+        : '';
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        // Stop all camera/mic tracks to release device
+        stream.getTracks().forEach((t) => t.stop());
+        activeStreamRef.current = null;
+
+        // Clear live preview
+        if (webcamVideoRef.current) {
+          webcamVideoRef.current.srcObject = null;
+        }
+
+        const blob = new Blob(recordedChunksRef.current, {
+          type: mimeType || 'video/webm',
+        });
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const file = new File([blob], `webcam_record.${ext}`, {
+          type: blob.type,
+          lastModified: Date.now(),
+        });
+
+        // Clear timer
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        setRecordingSeconds(0);
+        setIsRecording(false);
+
+        // Feed directly into existing upload flow
+        handleFileSelect(file);
+      };
+
+      // Store the stream so the useEffect below can attach it to the
+      // <video> ref once React has rendered the preview element.
+      activeStreamRef.current = stream;
+
+      recorder.start(250); // collect data every 250ms
+      setIsRecording(true); // triggers re-render → <video> mounts → useEffect fires
+      setRecordingSeconds(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setRecordingError('Camera/microphone permission denied. Please allow access and try again.');
+      } else if (err.name === 'NotFoundError') {
+        setRecordingError('No camera or microphone found on this device.');
+      } else {
+        setRecordingError(`Recording failed: ${err.message || 'Unknown error'}`);
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
   };
 
   const formatDate = (iso: string) => {
@@ -239,11 +341,65 @@ export function UserDashboardView() {
               <span className="text-xs font-medium uppercase text-slate-400 mx-4 tracking-wider">or capture live</span>
             </div>
 
-            <button className="mt-4 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
-              <PlayCircle className="w-4 h-4 mr-2" />
-              Initialize Stream
-            </button>
+            {/* Recording error */}
+            {recordingError && (
+              <div className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg max-w-md">
+                <CameraOff className="w-4 h-4 text-red-500 shrink-0" />
+                <p className="text-xs text-red-600">{recordingError}</p>
+                <button onClick={() => setRecordingError(null)} className="ml-auto text-red-400 hover:text-red-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Initialize Stream button — shown when NOT recording */}
+            {!isRecording && (
+              <button
+                onClick={startRecording}
+                className="mt-4 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                id="btn-initialize-stream"
+              >
+                <PlayCircle className="w-4 h-4 mr-2" />
+                Initialize Stream
+              </button>
+            )}
           </>
+        )}
+
+        {/* ── Live webcam preview (shown only while recording, outside upload-state gate) ── */}
+        {isRecording && (
+          <div className="w-full max-w-3xl flex flex-col items-center">
+            {/* Preview frame */}
+            <div className="relative w-full rounded-xl overflow-hidden border-2 border-red-300 shadow-lg bg-slate-950" style={{ aspectRatio: '16/9' }}>
+              <video
+                ref={webcamVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              {/* REC badge overlay */}
+              <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                </span>
+                <span className="text-white text-xs font-bold tracking-widest uppercase">REC</span>
+                <span className="text-red-300 text-xs font-mono font-semibold">{fmtRecordingTime(recordingSeconds)}</span>
+              </div>
+            </div>
+
+            {/* Stop & Upload button */}
+            <button
+              onClick={stopRecording}
+              className="mt-5 flex items-center gap-2.5 px-7 py-3 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white text-sm font-bold shadow-md shadow-red-500/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              id="btn-stop-upload"
+            >
+              <Square className="w-4 h-4" />
+              Stop &amp; Upload
+            </button>
+            <p className="mt-2 text-xs text-slate-400">Recording will be submitted to the analysis engine</p>
+          </div>
         )}
 
         {uploadState === 'uploading' && (

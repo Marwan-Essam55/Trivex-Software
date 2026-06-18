@@ -98,7 +98,7 @@ export function LoginView() {
         <div className="relative z-10 max-w-lg px-12 text-left">
           <div className="inline-flex items-center mb-8">
             <Activity className="w-8 h-8 text-white" />
-            <span className="ml-3 font-bold text-2xl text-white tracking-wider uppercase">Trivex</span>
+            <span className="ml-3 font-bold text-2xl text-white tracking-wider uppercase">TriVex</span>
           </div>
           <h2 className="text-4xl font-bold text-white mb-6 leading-tight">Secure Multi-Modal Analysis Platform</h2>
           <p className="text-slate-300 text-lg leading-relaxed border-l-2 border-slate-700 pl-4">
@@ -113,7 +113,7 @@ export function LoginView() {
             <div className="lg:hidden flex justify-center mb-6">
               <div className="flex items-center">
                 <Activity className="w-8 h-8 text-slate-900" />
-                <span className="ml-2 font-bold text-2xl text-slate-900 tracking-wider uppercase">Trivex</span>
+                <span className="ml-2 font-bold text-2xl text-slate-900 tracking-wider uppercase">TriVex</span>
               </div>
             </div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Access Workspace</h1>

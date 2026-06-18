@@ -202,7 +202,7 @@ export function HomeView() {
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
               <Activity className="h-6 w-6 text-teal-600 animate-pulse" />
-              <span className="font-bold text-xl text-slate-900 tracking-wider uppercase">Trivex</span>
+              <span className="font-bold text-xl text-slate-900 tracking-wider uppercase">TriVex</span>
             </div>
             <div>
               {isAuthenticated ? (
@@ -252,7 +252,7 @@ export function HomeView() {
               variants={heroItemVariants} 
               className="text-lg sm:text-xl text-slate-500 mb-12 max-w-3xl mx-auto font-normal leading-relaxed"
             >
-              Trivex provides an enterprise platform for researchers and analysts to decode human micro-expressions, vocal intonations, and kinematic posture with multimodal AI.
+              TriVex provides an enterprise platform for researchers and analysts to decode human micro-expressions, vocal intonations, and kinematic posture with multimodal AI.
             </motion.p>
             
             <motion.div variants={heroItemVariants} className="flex justify-center">
@@ -345,7 +345,7 @@ export function HomeView() {
                 Comprehensive Analysis Features
               </h2>
               <p className="mt-4 text-slate-500 text-base leading-relaxed">
-                Trivex delivers a full suite of analytical capabilities designed to meet high academic benchmarks and production-ready deployments.
+                TriVex delivers a full suite of analytical capabilities designed to meet high academic benchmarks and production-ready deployments.
               </p>
             </div>
 
@@ -590,11 +590,11 @@ export function HomeView() {
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-teal-600 animate-pulse" />
             <span className="font-bold text-slate-900 uppercase tracking-wider text-sm">
-              Trivex
+              TriVex
             </span>
           </div>
           <p className="text-slate-400 text-xs">
-            &copy; {new Date().getFullYear()} Trivex Systems. All rights reserved.
+            &copy; {new Date().getFullYear()} TriVex Systems. All rights reserved.
           </p>
         </div>
       </footer>
