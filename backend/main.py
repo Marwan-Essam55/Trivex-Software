@@ -6,6 +6,7 @@ from controllers.video_controller import router as video_router
 from controllers.auth_controller import router as auth_router
 from controllers.user_controller import router as user_router
 from controllers.admin_user_controller import router as admin_user_router
+from controllers.chat_controller import router as chat_router
 import cloudinary
 import os
 from dotenv import load_dotenv
@@ -42,3 +43,4 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(admin_user_router)
 app.include_router(video_router)
+app.include_router(chat_router)

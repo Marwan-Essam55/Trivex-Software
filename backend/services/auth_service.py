@@ -30,7 +30,7 @@ def authenticate_user(db: Session, form_data: OAuth2PasswordRequestForm):
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role.value.lower()}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.role.value.lower(), "user_id": str(user.id)}, expires_delta=access_token_expires
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -85,7 +85,7 @@ def authenticate_google_user(db: Session, token: str):
         
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role.value.lower()}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.role.value.lower(), "user_id": str(user.id)}, expires_delta=access_token_expires
     )
     
     return {"access_token": access_token, "token_type": "bearer"}

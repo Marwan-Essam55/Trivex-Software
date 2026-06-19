@@ -10,6 +10,7 @@ import { UserDashboardView } from './components/UserDashboardView';
 import { FusionEngineView } from './components/FusionEngineView';
 import { HistoryView } from './components/HistoryView';
 import { AccountView } from './components/AccountView';
+import { CommunityView } from './components/CommunityView';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -68,6 +69,7 @@ function AppContent() {
             <Route path="/fusion-engine" element={<FusionEngineView />} />
             <Route path="/history" element={<HistoryView />} />
             <Route path="/account" element={<AccountView />} />
+            <Route path="/community" element={<CommunityView />} />
           </Route>
           
           {/* Redirect any unknown route to home */}

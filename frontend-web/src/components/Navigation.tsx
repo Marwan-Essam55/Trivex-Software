@@ -1,4 +1,4 @@
-import { Activity, User, Menu } from 'lucide-react';
+import { Activity, User, Menu, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -28,6 +28,7 @@ export function Navigation() {
 
   const dashboardPath = role === 'admin' ? '/dashboard/admin' : '/dashboard/user';
   const isDashboardActive = location.pathname.startsWith('/dashboard') || location.pathname === '/fusion-engine';
+  const isCommunityActive = location.pathname === '/community';
 
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -58,6 +59,17 @@ export function Navigation() {
                 } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}
               >
                 History
+              </Link>
+              <Link
+                to="/community"
+                className={`${
+                  isCommunityActive
+                    ? 'border-teal-600 text-teal-700'
+                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                } inline-flex items-center gap-1.5 px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Community
               </Link>
             </div>
           </div>
@@ -115,6 +127,17 @@ export function Navigation() {
               } block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
             >
               History
+            </Link>
+            <Link
+              to="/community"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`${
+                isCommunityActive
+                  ? 'bg-teal-50 border-teal-600 text-teal-700'
+                  : 'border-transparent text-slate-500 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700'
+              } block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
+            >
+              Community
             </Link>
             <Link
               to="/account"
