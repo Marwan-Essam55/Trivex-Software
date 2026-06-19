@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, Enum as SQLEnum, Uuid
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, Enum as SQLEnum, Uuid, ForeignKey
 from sqlalchemy.orm import relationship
 from database.session import Base
 
@@ -24,5 +24,10 @@ class User(Base):
     available_credits = Column(Integer, default=10)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Company & Title Isolation fields
+    company_name = Column(String, nullable=True)
+    title = Column(String, nullable=True)
+    created_by_id = Column(Uuid, ForeignKey("users.id"), nullable=True)
 
     videos = relationship("Video", back_populates="user", cascade="all, delete-orphan")

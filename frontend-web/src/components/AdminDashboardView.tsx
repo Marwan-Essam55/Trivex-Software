@@ -18,6 +18,9 @@ interface UserProfile {
   available_credits: number;
   is_active: boolean;
   profile_picture_url?: string | null;
+  company_name?: string | null;
+  title?: string | null;
+  created_by_id?: string | null;
 }
 
 function authHeaders() {
@@ -94,13 +97,23 @@ const inputCls =
   'w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-colors';
 
 function CreateUserModal({
+  isSuperAdmin,
   onClose,
   onCreated,
 }: {
+  isSuperAdmin: boolean;
   onClose: () => void;
   onCreated: (user: UserProfile) => void;
 }) {
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', role: 'USER' as UserRole });
+  const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    password: '',
+    role: (isSuperAdmin ? 'ADMIN' : 'USER') as UserRole,
+    company_name: '',
+    title: '',
+  });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +125,12 @@ function CreateUserModal({
     setLoading(true);
     setError(null);
     try {
-      const payload = { ...form, role: form.role.toUpperCase() };
+      const payload = {
+        ...form,
+        role: (isSuperAdmin ? 'ADMIN' : 'USER'),
+        company_name: isSuperAdmin ? form.company_name : undefined,
+        title: !isSuperAdmin ? form.title : undefined,
+      };
       const res = await fetch(`${API_BASE}/admin/users`, {
         method: 'POST',
         headers: authHeaders(),
@@ -149,14 +167,25 @@ function CreateUserModal({
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />{error}
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="First Name">
-              <input className={inputCls} value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
+          {isSuperAdmin ? (
+            <Field label="Company Name">
+              <input className={inputCls} value={form.company_name} onChange={e => set('company_name', e.target.value)} required />
             </Field>
-            <Field label="Last Name">
-              <input className={inputCls} value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
-            </Field>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="First Name">
+                  <input className={inputCls} value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
+                </Field>
+                <Field label="Last Name">
+                  <input className={inputCls} value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
+                </Field>
+              </div>
+              <Field label="Job Title / Title">
+                <input className={inputCls} value={form.title} onChange={e => set('title', e.target.value)} required />
+              </Field>
+            </>
+          )}
           <Field label="Email">
             <input type="email" className={inputCls} value={form.email} onChange={e => set('email', e.target.value)} required />
           </Field>
@@ -173,15 +202,6 @@ function CreateUserModal({
               <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700" onClick={() => setShowPw(v => !v)}>
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
-            </div>
-          </Field>
-          <Field label="Role">
-            <div className="relative">
-              <select className={`${inputCls} appearance-none pr-8`} value={form.role.toUpperCase()} onChange={e => set('role', e.target.value)}>
-                <option value="USER">User</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
           </Field>
           <div className="flex gap-3 pt-2">
@@ -205,14 +225,23 @@ function CreateUserModal({
 
 function EditUserModal({
   user,
+  isSuperAdmin,
   onClose,
   onUpdated,
 }: {
   user: UserProfile;
+  isSuperAdmin: boolean;
   onClose: () => void;
   onUpdated: (u: UserProfile) => void;
 }) {
-  const [info, setInfo] = useState({ first_name: user.first_name, last_name: user.last_name, email: user.email, role: user.role });
+  const [info, setInfo] = useState({
+    first_name: user.first_name,
+    last_name: user.last_name,
+    email: user.email,
+    role: user.role,
+    company_name: user.company_name || '',
+    title: user.title || '',
+  });
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoMsg, setInfoMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -234,7 +263,14 @@ function EditUserModal({
       const res = await fetch(`${API_BASE}/admin/users/${user.id}`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ first_name: info.first_name, last_name: info.last_name, email: info.email, role: info.role.toUpperCase() }),
+        body: JSON.stringify({
+          first_name: info.first_name,
+          last_name: info.last_name,
+          email: info.email,
+          role: info.role.toUpperCase(),
+          company_name: isSuperAdmin ? info.company_name : undefined,
+          title: !isSuperAdmin ? info.title : undefined,
+        }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Update failed'); }
       const updated: UserProfile = await res.json();
@@ -309,25 +345,27 @@ function EditUserModal({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Basic Information</span>
             </div>
             <form onSubmit={handleInfoSave} className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="First Name">
-                  <input className={inputCls} value={info.first_name} onChange={e => setInfoField('first_name', e.target.value)} required />
+              {isSuperAdmin ? (
+                <Field label="Company Name">
+                  <input className={inputCls} value={info.company_name} onChange={e => setInfoField('company_name', e.target.value)} required />
                 </Field>
-                <Field label="Last Name">
-                  <input className={inputCls} value={info.last_name} onChange={e => setInfoField('last_name', e.target.value)} required />
-                </Field>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="First Name">
+                      <input className={inputCls} value={info.first_name} onChange={e => setInfoField('first_name', e.target.value)} required />
+                    </Field>
+                    <Field label="Last Name">
+                      <input className={inputCls} value={info.last_name} onChange={e => setInfoField('last_name', e.target.value)} required />
+                    </Field>
+                  </div>
+                  <Field label="Job Title / Title">
+                    <input className={inputCls} value={info.title} onChange={e => setInfoField('title', e.target.value)} required />
+                  </Field>
+                </>
+              )}
               <Field label="Email">
                 <input type="email" className={inputCls} value={info.email} onChange={e => setInfoField('email', e.target.value)} required />
-              </Field>
-              <Field label="Role">
-                <div className="relative">
-                  <select className={`${inputCls} appearance-none pr-8`} value={info.role.toUpperCase()} onChange={e => setInfoField('role', e.target.value)}>
-                    <option value="USER">User</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
               </Field>
               <div className="flex items-center justify-between pt-1">
                 <Msg m={infoMsg} />
@@ -487,6 +525,7 @@ export function AdminDashboardView() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -494,6 +533,18 @@ export function AdminDashboardView() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserProfile | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserProfile | null>(null);
+
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch current user profile', err);
+    }
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -510,7 +561,12 @@ export function AdminDashboardView() {
     }
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    fetchCurrentUser();
+    fetchUsers();
+  }, [fetchCurrentUser, fetchUsers]);
+
+  const isSuperAdmin = currentUser ? (currentUser.email === 'admin@admin.com' || !currentUser.company_name) : true;
 
   const totalUsers = users.length;
   const activeUsers = users.filter(u => u.is_active).length;
@@ -536,7 +592,7 @@ export function AdminDashboardView() {
   };
 
   const handleDeleted = (id: string) => {
-    setUsers(prev => prev.filter(x => x.id !== id));
+    setUsers(prev => prev.filter(x => x.id !== id && x.created_by_id !== id));
     setDeleteUser(null);
   };
 
@@ -545,7 +601,9 @@ export function AdminDashboardView() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">User Management</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {isSuperAdmin ? 'User Management' : (currentUser?.company_name || 'Company Dashboard')}
+            </h1>
             <p className="text-sm text-slate-500 mt-1">Manage platform users, roles, and access control.</p>
           </div>
           <button
@@ -620,7 +678,9 @@ export function AdminDashboardView() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {isSuperAdmin ? 'Company' : 'Title'}
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Credits</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
@@ -632,15 +692,27 @@ export function AdminDashboardView() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
-                            {u.first_name[0]}{u.last_name[0]}
+                            {u.role.toUpperCase() === 'ADMIN' && u.company_name ? u.company_name[0].toUpperCase() : `${u.first_name[0]}${u.last_name[0]}`}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900">{u.first_name} {u.last_name}</p>
+                            <p className="font-semibold text-slate-900">
+                              {u.role.toUpperCase() === 'ADMIN' && u.company_name ? u.company_name : `${u.first_name} ${u.last_name}`}
+                            </p>
                             <p className="text-xs text-slate-500">{u.email}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4"><RoleBadge role={u.role} /></td>
+                      <td className="px-6 py-4">
+                        {isSuperAdmin ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 text-xs font-semibold">
+                            {u.company_name || 'N/A'}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 text-xs font-medium">
+                            {u.title || 'N/A'}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4"><StatusBadge active={u.is_active} /></td>
                       <td className="px-6 py-4 text-slate-700 font-medium">{u.available_credits.toLocaleString()}</td>
                       <td className="px-6 py-4">
@@ -676,10 +748,11 @@ export function AdminDashboardView() {
       </div>
 
       {/* Modals */}
-      {isCreateOpen && <CreateUserModal onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} />}
+      {isCreateOpen && <CreateUserModal isSuperAdmin={isSuperAdmin} onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} />}
       {editUser && (
         <EditUserModal
           user={editUser}
+          isSuperAdmin={isSuperAdmin}
           onClose={() => setEditUser(null)}
           onUpdated={u => { handleUpdated(u); setEditUser(u); }}
         />

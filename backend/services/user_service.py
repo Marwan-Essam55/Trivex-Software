@@ -10,14 +10,17 @@ def get_user_by_email(db: Session, email: str):
 def get_user_by_id(db: Session, user_id: uuid.UUID):
     return db.query(User).filter(User.id == user_id).first()
 
-def create_user(db: Session, user: UserCreate):
+def create_user(db: Session, user: UserCreate, created_by_id: uuid.UUID = None):
     hashed_password = get_password_hash(user.password)
     db_user = User(
         first_name=user.first_name,
         last_name=user.last_name,
         email=user.email.lower(),
         hashed_password=hashed_password,
-        role=user.role
+        role=user.role,
+        company_name=user.company_name,
+        title=user.title,
+        created_by_id=created_by_id
     )
     db.add(db_user)
     db.commit()
@@ -81,6 +84,10 @@ def update_own_profile(db: Session, db_user: User, profile_in: UserOwnProfileUpd
     return db_user
 
 def delete_user(db: Session, db_user: User):
+    if db_user.role == UserRole.ADMIN and db_user.company_name:
+        created_users = db.query(User).filter(User.created_by_id == db_user.id).all()
+        for u in created_users:
+            db.delete(u)
     db.delete(db_user)
     db.commit()
     return db_user
@@ -99,4 +106,7 @@ def toggle_user_status(db: Session, db_user: User):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def get_users_by_creator(db: Session, creator_id: uuid.UUID, skip: int = 0, limit: int = 100):
+    return db.query(User).filter(User.created_by_id == creator_id).offset(skip).limit(limit).all()
 

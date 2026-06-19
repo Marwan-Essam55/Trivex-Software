@@ -5,11 +5,13 @@ from models.user import UserRole
 
 class UserCreate(BaseModel):
     """Used by admins to create users (supports role assignment)."""
-    first_name: str = Field(..., min_length=1)
-    last_name: str = Field(..., min_length=1)
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     email: EmailStr
     password: str = Field(..., min_length=8)
     role: Optional[UserRole] = UserRole.USER
+    company_name: Optional[str] = None
+    title: Optional[str] = None
 
     @validator("role", pre=True)
     def normalize_role(cls, v):
@@ -33,6 +35,9 @@ class UserProfileResponse(BaseModel):
     role: UserRole
     available_credits: int
     is_active: bool
+    company_name: Optional[str] = None
+    title: Optional[str] = None
+    created_by_id: Optional[UUID] = None
 
     class Config:
         orm_mode = True
@@ -51,6 +56,8 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
     available_credits: Optional[int] = None
+    company_name: Optional[str] = None
+    title: Optional[str] = None
 
     @validator("role", pre=True)
     def normalize_role(cls, v):
