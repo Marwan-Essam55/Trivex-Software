@@ -174,7 +174,6 @@ async def chat_websocket(
     On connect, receive live messages as JSON.
     To send a message, send JSON: {"content": "hello"}
     """
-    from core.security import get_current_user as _get_user
     from jose import jwt, JWTError
     from core.security import SECRET_KEY, ALGORITHM
     from services.user_service import get_user_by_email

@@ -14,7 +14,7 @@ class User(Base):
 
     id = Column(Uuid, primary_key=True, default=uuid.uuid4, index=True)
     first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     profile_picture_url = Column(String, nullable=True)

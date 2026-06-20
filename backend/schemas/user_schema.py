@@ -3,6 +3,7 @@ from uuid import UUID
 from typing import Optional
 from models.user import UserRole
 
+
 class UserCreate(BaseModel):
     """Used by admins to create users (supports role assignment)."""
     first_name: Optional[str] = None
@@ -16,8 +17,13 @@ class UserCreate(BaseModel):
     @validator("role", pre=True)
     def normalize_role(cls, v):
         if isinstance(v, str):
-            return v.upper()
+            v_upper = v.upper()
+            allowed = {r.value for r in UserRole}
+            if v_upper not in allowed:
+                raise ValueError(f"Invalid role '{v}'. Must be one of: {allowed}")
+            return v_upper
         return v
+
 
 class RegisterUser(BaseModel):
     """Used for self-registration — no role field to prevent privilege escalation."""
@@ -26,10 +32,11 @@ class RegisterUser(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
 
+
 class UserProfileResponse(BaseModel):
     id: UUID
     first_name: str
-    last_name: str
+    last_name: Optional[str] = None
     email: EmailStr
     profile_picture_url: Optional[str] = None
     role: UserRole
@@ -39,16 +46,17 @@ class UserProfileResponse(BaseModel):
     title: Optional[str] = None
     created_by_id: Optional[UUID] = None
 
-    class Config:
-        orm_mode = True
-        from_attributes = True
+    model_config = {"from_attributes": True}
+
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class GoogleAuthToken(BaseModel):
     token: str
+
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
@@ -62,13 +70,19 @@ class UserUpdate(BaseModel):
     @validator("role", pre=True)
     def normalize_role(cls, v):
         if isinstance(v, str):
-            return v.upper()
+            v_upper = v.upper()
+            allowed = {r.value for r in UserRole}
+            if v_upper not in allowed:
+                raise ValueError(f"Invalid role '{v}'. Must be one of: {allowed}")
+            return v_upper
         return v
+
 
 class UserOwnProfileUpdate(BaseModel):
     """Schema for users updating their own profile — no role/credits/email changes."""
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+
 
 class UserResetPassword(BaseModel):
     new_password: str = Field(..., min_length=8)

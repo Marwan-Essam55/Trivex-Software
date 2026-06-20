@@ -1,7 +1,9 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 class Settings:
     db_url: str = os.getenv("DATABASE_URL", "sqlite:///./trivex.db")
@@ -12,5 +14,6 @@ class Settings:
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")
+
 
 settings = Settings()

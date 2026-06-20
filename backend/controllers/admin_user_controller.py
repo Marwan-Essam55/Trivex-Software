@@ -22,13 +22,15 @@ def create_user(user: UserCreate, db: Session = Depends(get_db), current_admin: 
     
     is_super_admin = (current_admin.email == "admin@admin.com" or not current_admin.company_name)
     if is_super_admin:
+        # Super-admin is creating a new company admin account
         user.role = UserRole.ADMIN
         if not user.company_name:
             raise HTTPException(status_code=400, detail="Company name is required for new company admins")
-        user.first_name = user.company_name
-        user.last_name = "Admin"
-        user.title = None
+        if not user.first_name or not user.last_name:
+            raise HTTPException(status_code=400, detail="First name and last name are required for the new admin")
+        # title is passed through as-is from the payload (may be None)
     else:
+        # Regular admin is creating a user under their own company
         user.role = UserRole.USER
         user.company_name = current_admin.company_name
         if not user.first_name or not user.last_name:
