@@ -26,7 +26,8 @@ def run_tests():
         "first_name": "Test",
         "last_name": "User",
         "email": "testuser@example.com",
-        "password": "SecurePassword123"
+        "password": "SecurePassword123",
+        "company_name": "TestCompany"
     }
     response = client.post(
         "/admin/users/",
@@ -55,8 +56,34 @@ def run_tests():
     user_headers = {"Authorization": f"Bearer {user_token}"}
     logger.info("-> User login successful")
 
+    logger.info("3b. Creating a standard user via company admin...")
+    standard_user_data = {
+        "first_name": "Standard",
+        "last_name": "User",
+        "email": "standarduser@example.com",
+        "password": "SecurePassword123"
+    }
+    response = client.post(
+        "/admin/users/",
+        json=standard_user_data,
+        headers=user_headers
+    )
+    assert response.status_code == 201, f"Failed to create standard user: {response.json()}"
+    standard_user_id = response.json()["id"]
+    logger.info(f"-> Standard user created successfully: {standard_user_id}")
+
+    logger.info("3c. Logging in as standard user...")
+    response = client.post(
+        "/auth/login",
+        data={"username": "standarduser@example.com", "password": "SecurePassword123"}
+    )
+    assert response.status_code == 200, f"Failed to login as standard user: {response.json()}"
+    standard_token = response.json()["access_token"]
+    standard_headers = {"Authorization": f"Bearer {standard_token}"}
+    logger.info("-> Standard user login successful")
+
     logger.info("4. Hitting admin route as standard user...")
-    response = client.get("/admin/users/", headers=user_headers)
+    response = client.get("/admin/users/", headers=standard_headers)
     assert response.status_code == 403, f"Expected 403, got {response.status_code}"
     logger.info("-> Properly blocked with 403")
 
@@ -107,7 +134,8 @@ def run_tests():
             "first_name": "Test",
             "last_name": "User",
             "email": "shortpass@example.com",
-            "password": "short"
+            "password": "short",
+            "company_name": "TestCompany"
         },
         headers=admin_headers
     )

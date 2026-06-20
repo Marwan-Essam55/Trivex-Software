@@ -40,7 +40,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db), current_admin: 
 def list_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin_user)):
     is_super_admin = (current_admin.email == "admin@admin.com" or not current_admin.company_name)
     if is_super_admin:
-        return user_service.get_all_users(db, skip=skip, limit=limit)
+        return db.query(User).filter(User.role == UserRole.ADMIN).offset(skip).limit(limit).all()
     else:
         return user_service.get_users_by_creator(db, creator_id=current_admin.id, skip=skip, limit=limit)
 
@@ -59,10 +59,17 @@ def update_user(user_id: uuid.UUID, user_in: UserUpdate, db: Session = Depends(g
     return user_service.update_user(db=db, db_user=db_user, user_in=user_in)
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
+def delete_user(user_id: uuid.UUID, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin_user)):
     db_user = user_service.get_user_by_id(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
+        
+    if db_user.id == current_admin.id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account.")
+        
+    if db_user.email == "admin@admin.com":
+        raise HTTPException(status_code=400, detail="The master admin account cannot be deleted.")
+        
     user_service.delete_user(db=db, db_user=db_user)
     return None
 

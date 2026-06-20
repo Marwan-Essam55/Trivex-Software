@@ -724,13 +724,19 @@ export function AdminDashboardView() {
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
-                          <button
-                            id={`btn-delete-${u.id}`}
-                            onClick={() => setDeleteUser(u)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </button>
+                          {u.email === 'admin@admin.com' || u.id === currentUser?.id ? (
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-400 border border-slate-200 rounded-md bg-slate-50 cursor-not-allowed select-none" title="Cannot delete master admin or current user">
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </span>
+                          ) : (
+                            <button
+                              id={`btn-delete-${u.id}`}
+                              onClick={() => setDeleteUser(u)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

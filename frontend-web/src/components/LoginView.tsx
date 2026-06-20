@@ -15,7 +15,7 @@ export function LoginView() {
     e.preventDefault();
     try {
       const formData = new URLSearchParams();
-      formData.append('username', email);
+      formData.append('username', email.trim());
       formData.append('password', password);
 
       const response = await fetch('http://localhost:8000/auth/login', {

@@ -61,14 +61,9 @@ def authenticate_google_user(db: Session, token: str):
     user = get_user_by_email(db, email=email)
     
     if not user:
-        # Upsert: create a new user from Google profile data
-        user = create_google_user(
-            db=db,
-            email=email,
-            first_name=given_name or "Google",
-            last_name=family_name or "User",
-            google_id=google_id,
-            profile_picture_url=picture,
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This email is not registered on this platform. Please contact your system administrator."
         )
         
     if not user.is_active:

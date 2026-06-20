@@ -19,13 +19,16 @@ export function Navigation() {
 
   const token = localStorage.getItem('access_token');
   let role = 'user';
+  let email = '';
   if (token) {
     try {
       const decoded: any = jwtDecode(token);
       role = decoded.role;
+      email = decoded.sub;
     } catch (e) {}
   }
 
+  const isSuperAdmin = role === 'admin' && (email === 'admin@admin.com' || !email);
   const dashboardPath = role === 'admin' ? '/dashboard/admin' : '/dashboard/user';
   const isDashboardActive = location.pathname.startsWith('/dashboard') || location.pathname === '/fusion-engine';
   const isCommunityActive = location.pathname === '/community';
@@ -35,7 +38,7 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to={dashboardPath} className="flex-shrink-0 flex items-center cursor-pointer">
+            <Link to="/" className="flex-shrink-0 flex items-center cursor-pointer">
               <Activity className="h-6 w-6 text-teal-600 animate-pulse" />
               <span className="ml-2 font-bold text-xl text-slate-900 tracking-wider uppercase">TriVex</span>
             </Link>
@@ -50,16 +53,18 @@ export function Navigation() {
               >
                 Dashboard
               </Link>
-              <Link
-                to="/history"
-                className={`${
-                  location.pathname === '/history'
-                    ? 'border-slate-900 text-slate-900'
-                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
-                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}
-              >
-                History
-              </Link>
+              {!isSuperAdmin && (
+                <Link
+                  to="/history"
+                  className={`${
+                    location.pathname === '/history'
+                      ? 'border-slate-900 text-slate-900'
+                      : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}
+                >
+                  History
+                </Link>
+              )}
               <Link
                 to="/community"
                 className={`${
@@ -117,17 +122,19 @@ export function Navigation() {
             >
               Dashboard
             </Link>
-            <Link
-              to="/history"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`${
-                location.pathname === '/history'
-                  ? 'bg-slate-50 border-slate-900 text-slate-900'
-                  : 'border-transparent text-slate-500 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700'
-              } block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
-            >
-              History
-            </Link>
+            {!isSuperAdmin && (
+              <Link
+                to="/history"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`${
+                  location.pathname === '/history'
+                    ? 'bg-slate-50 border-slate-900 text-slate-900'
+                    : 'border-transparent text-slate-500 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700'
+                } block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
+              >
+                History
+              </Link>
+            )}
             <Link
               to="/community"
               onClick={() => setMobileMenuOpen(false)}

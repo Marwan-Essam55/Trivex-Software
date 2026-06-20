@@ -5,7 +5,7 @@ from core.security import get_password_hash
 import uuid
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email.lower()).first()
+    return db.query(User).filter(User.email == email.strip().lower()).first()
 
 def get_user_by_id(db: Session, user_id: uuid.UUID):
     return db.query(User).filter(User.id == user_id).first()
@@ -85,8 +85,11 @@ def update_own_profile(db: Session, db_user: User, profile_in: UserOwnProfileUpd
 
 def delete_user(db: Session, db_user: User):
     if db_user.role == UserRole.ADMIN and db_user.company_name:
-        created_users = db.query(User).filter(User.created_by_id == db_user.id).all()
-        for u in created_users:
+        company_users = db.query(User).filter(
+            (User.created_by_id == db_user.id) | 
+            ((User.company_name == db_user.company_name) & (User.role == UserRole.USER))
+        ).all()
+        for u in company_users:
             db.delete(u)
     db.delete(db_user)
     db.commit()
