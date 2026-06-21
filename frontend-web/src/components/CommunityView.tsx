@@ -80,22 +80,21 @@ function Avatar({ user, size = 'md' }: { user: Participant | { first_name: strin
 
 export function CommunityView() {
   const myId = getCurrentUserId();
+  const [allMembers, setAllMembers] = useState<Participant[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConvo, setSelectedConvo] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Participant[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(true);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load conversations on mount
+  // Load all company members and conversations on mount
   useEffect(() => {
+    fetchAllMembers();
     fetchConversations();
   }, []);
 
@@ -119,7 +118,6 @@ export function CommunityView() {
     ws.onmessage = (e) => {
       const msg: ChatMessage = JSON.parse(e.data);
       setMessages(prev => {
-        // Avoid duplicates
         if (prev.some(m => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
@@ -130,12 +128,26 @@ export function CommunityView() {
     return () => { ws.close(); };
   }, [selectedConvo?.id]);
 
+  const fetchAllMembers = async () => {
+    setLoadingMembers(true);
+    try {
+      const res = await fetch(`${API}/community/users`, { headers: getHeaders() });
+      if (res.ok) {
+        const data: Participant[] = await res.json();
+        // Exclude current user
+        setAllMembers(data.filter(u => u.id !== myId));
+      } else if (res.status === 400) {
+        setError('You are not assigned to a company yet.');
+      }
+    } catch { setError('Could not reach the server.'); }
+    finally { setLoadingMembers(false); }
+  };
+
   const fetchConversations = async () => {
     try {
       const res = await fetch(`${API}/community/conversations`, { headers: getHeaders() });
       if (res.ok) setConversations(await res.json());
-      else if (res.status === 400) setError('You are not assigned to a company yet.');
-    } catch { setError('Could not reach the server.'); }
+    } catch { /* silent */ }
   };
 
   const fetchMessages = async (convoId: string) => {
@@ -148,15 +160,11 @@ export function CommunityView() {
 
   const selectConversation = async (convo: Conversation) => {
     setSelectedConvo(convo);
-    setShowSearch(false);
-    setSearchQuery('');
-    setSearchResults([]);
     await fetchMessages(convo.id);
-    // Mark unread locally
     setConversations(prev => prev.map(c => c.id === convo.id ? { ...c, unread_count: 0 } : c));
   };
 
-  const startConversation = async (user: Participant) => {
+  const openChatWithMember = async (user: Participant) => {
     try {
       const res = await fetch(`${API}/community/conversations/${user.id}`, {
         method: 'POST',
@@ -170,7 +178,7 @@ export function CommunityView() {
         });
         await selectConversation(convo);
       }
-    } catch { setError('Could not start conversation.'); }
+    } catch { setError('Could not open conversation.'); }
   };
 
   const sendMessage = async () => {
@@ -178,11 +186,9 @@ export function CommunityView() {
     const content = input.trim();
     setInput('');
 
-    // Try WebSocket first
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ content }));
     } else {
-      // REST fallback
       const res = await fetch(`${API}/community/conversations/${selectedConvo.id}/messages`, {
         method: 'POST',
         headers: getHeaders(),
@@ -194,7 +200,6 @@ export function CommunityView() {
       }
     }
 
-    // Update last message in convo list
     setConversations(prev => prev.map(c =>
       c.id === selectedConvo.id
         ? { ...c, last_message: { content, created_at: new Date().toISOString(), sender_id: myId } as any }
@@ -202,18 +207,30 @@ export function CommunityView() {
     ));
   };
 
-  const handleSearch = (q: string) => {
-    setSearchQuery(q);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (!q.trim()) { setSearchResults([]); return; }
-    searchTimeout.current = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const res = await fetch(`${API}/community/users?search=${encodeURIComponent(q)}`, { headers: getHeaders() });
-        if (res.ok) setSearchResults(await res.json());
-      } finally { setIsSearching(false); }
-    }, 300);
+  // Find existing conversation for a member (if any)
+  const getConvoForMember = (userId: string): Conversation | undefined => {
+    return conversations.find(c =>
+      c.participant_a.id === userId || c.participant_b.id === userId
+    );
   };
+
+  // Determine if a member is the currently selected chat partner
+  const isMemberSelected = (userId: string): boolean => {
+    if (!selectedConvo) return false;
+    const other = getOtherParticipant(selectedConvo, myId);
+    return other.id === userId;
+  };
+
+  // Filter members by search query
+  const filteredMembers = allMembers.filter(u => {
+    const q = searchQuery.toLowerCase();
+    return (
+      u.first_name.toLowerCase().includes(q) ||
+      u.last_name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.title || '').toLowerCase().includes(q)
+    );
+  });
 
   const otherUser = selectedConvo ? getOtherParticipant(selectedConvo, myId) : null;
 
@@ -224,104 +241,105 @@ export function CommunityView() {
       <aside className="w-80 border-r border-slate-200 bg-white flex flex-col flex-shrink-0">
 
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-teal-600" />
-            <h2 className="font-semibold text-slate-800">Community</h2>
-          </div>
-          <button
-            id="community-new-chat-btn"
-            onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults([]); }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
-            title="Start new chat"
-          >
-            {showSearch ? <X className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
-          </button>
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+          <Users className="w-5 h-5 text-teal-600" />
+          <h2 className="font-semibold text-slate-800">Team Members</h2>
+          {allMembers.length > 0 && (
+            <span className="ml-auto text-xs bg-slate-100 text-slate-500 rounded-full px-2 py-0.5 font-medium">
+              {allMembers.length}
+            </span>
+          )}
         </div>
 
-        {/* Search panel */}
-        {showSearch && (
-          <div className="px-4 pt-3 pb-2 border-b border-slate-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                id="community-search-input"
-                autoFocus
-                type="text"
-                placeholder="Search colleagues…"
-                value={searchQuery}
-                onChange={e => handleSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Search results */}
-            <div className="mt-2 max-h-52 overflow-y-auto">
-              {isSearching && (
-                <div className="text-center py-3 text-sm text-slate-400">Searching…</div>
-              )}
-              {!isSearching && searchQuery && searchResults.length === 0 && (
-                <div className="text-center py-3 text-sm text-slate-400">No colleagues found</div>
-              )}
-              {searchResults.map(user => (
-                <button
-                  key={user.id}
-                  onClick={() => startConversation(user)}
-                  className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left"
-                >
-                  <Avatar user={user} size="sm" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-slate-800 truncate">{user.first_name} {user.last_name}</div>
-                    {user.title && <div className="text-xs text-slate-400 truncate">{user.title}</div>}
-                  </div>
-                </button>
-              ))}
-            </div>
+        {/* Search bar */}
+        <div className="px-4 py-3 border-b border-slate-100">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              id="community-search-input"
+              type="text"
+              placeholder="Search members…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Conversation list */}
+        {/* Members list */}
         <div className="flex-1 overflow-y-auto">
           {error && (
             <div className="m-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
           )}
-          {!error && conversations.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
-              <div className="w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mb-3">
-                <MessageSquare className="w-7 h-7 text-teal-400" />
-              </div>
-              <p className="text-sm font-medium text-slate-700 mb-1">No conversations yet</p>
-              <p className="text-xs text-slate-400">Click the chat icon above to find a colleague</p>
+
+          {loadingMembers && (
+            <div className="flex flex-col gap-3 p-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-slate-200 rounded w-3/4" />
+                    <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-          {conversations.map(convo => {
-            const other = getOtherParticipant(convo, myId);
-            const isActive = selectedConvo?.id === convo.id;
+
+          {!loadingMembers && !error && filteredMembers.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+              <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                <Users className="w-7 h-7 text-slate-300" />
+              </div>
+              <p className="text-sm text-slate-500">
+                {searchQuery ? 'No members match your search' : 'No team members found'}
+              </p>
+            </div>
+          )}
+
+          {!loadingMembers && filteredMembers.map(user => {
+            const convo = getConvoForMember(user.id);
+            const unread = convo?.unread_count ?? 0;
+            const lastMsg = convo?.last_message;
+            const isActive = isMemberSelected(user.id);
+
             return (
               <button
-                key={convo.id}
-                id={`convo-${convo.id}`}
-                onClick={() => selectConversation(convo)}
-                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 ${isActive ? 'bg-teal-50 border-l-2 border-l-teal-500' : ''}`}
+                key={user.id}
+                id={`member-${user.id}`}
+                onClick={() => openChatWithMember(user)}
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 ${
+                  isActive ? 'bg-teal-50 border-l-2 border-l-teal-500' : ''
+                }`}
               >
-                <div className="relative">
-                  <Avatar user={other} size="md" />
+                <div className="relative flex-shrink-0">
+                  <Avatar user={user} size="md" />
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-sm font-medium text-slate-800 truncate">{other.first_name} {other.last_name}</span>
-                    {convo.last_message && (
-                      <span className="text-xs text-slate-400 flex-shrink-0 ml-1">{formatTime(convo.last_message.created_at)}</span>
+                    <span className={`text-sm truncate ${isActive ? 'font-semibold text-teal-700' : 'font-medium text-slate-800'}`}>
+                      {user.first_name} {user.last_name}
+                    </span>
+                    {lastMsg && (
+                      <span className="text-xs text-slate-400 flex-shrink-0 ml-1">{formatTime(lastMsg.created_at)}</span>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-400 truncate">
-                      {convo.last_message ? convo.last_message.content : 'Start a conversation'}
+                      {lastMsg ? lastMsg.content : user.title || user.email}
                     </span>
-                    {convo.unread_count > 0 && (
+                    {unread > 0 && (
                       <span className="ml-1 bg-teal-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 font-medium">
-                        {convo.unread_count > 9 ? '9+' : convo.unread_count}
+                        {unread > 9 ? '9+' : unread}
                       </span>
                     )}
                   </div>
@@ -342,7 +360,7 @@ export function CommunityView() {
             </div>
             <h3 className="text-xl font-semibold text-slate-800 mb-2">Company Community</h3>
             <p className="text-slate-500 max-w-sm text-sm leading-relaxed">
-              Chat privately with your colleagues. All conversations stay within your company workspace.
+              Select a team member from the list to start a private conversation within your company workspace.
             </p>
           </div>
         ) : (
