@@ -3,7 +3,7 @@ import uuid
 from typing import List, Optional, Dict
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, File, UploadFile, status
 from sqlalchemy.orm import Session
 
 from core.security import get_current_user, get_db
@@ -19,27 +19,44 @@ router = APIRouter(prefix="/community", tags=["Community"])
 
 class ConnectionManager:
     def __init__(self):
-        # conversation_id -> list of websocket connections
-        self.active: Dict[str, List[WebSocket]] = {}
+        # conversation_id -> {user_id: WebSocket}
+        self.active: Dict[str, Dict[str, WebSocket]] = {}
 
-    async def connect(self, conversation_id: str, ws: WebSocket):
+    async def connect(self, conversation_id: str, user_id: str, ws: WebSocket):
         await ws.accept()
-        self.active.setdefault(conversation_id, []).append(ws)
+        self.active.setdefault(conversation_id, {})[user_id] = ws
 
-    def disconnect(self, conversation_id: str, ws: WebSocket):
-        convo_list = self.active.get(conversation_id, [])
-        if ws in convo_list:
-            convo_list.remove(ws)
+    def disconnect(self, conversation_id: str, user_id: str):
+        convo_map = self.active.get(conversation_id, {})
+        convo_map.pop(user_id, None)
 
-    async def broadcast(self, conversation_id: str, data: dict):
+    def get_participants(self, conversation_id: str) -> Dict[str, WebSocket]:
+        return self.active.get(conversation_id, {})
+
+    async def broadcast(self, conversation_id: str, data: dict, exclude_user_id: str | None = None):
+        """Broadcast a payload to all connected participants of a conversation."""
         dead = []
-        for ws in self.active.get(conversation_id, []):
+        for uid, ws in list(self.get_participants(conversation_id).items()):
+            if uid == exclude_user_id:
+                continue
             try:
                 await ws.send_json(data)
             except Exception:
-                dead.append(ws)
-        for ws in dead:
-            self.disconnect(conversation_id, ws)
+                dead.append(uid)
+        for uid in dead:
+            self.disconnect(conversation_id, uid)
+
+    async def send_to_user(self, conversation_id: str, user_id: str, data: dict):
+        """Send a payload to a specific user in a conversation."""
+        ws = self.get_participants(conversation_id).get(user_id)
+        if ws:
+            try:
+                await ws.send_json(data)
+            except Exception:
+                self.disconnect(conversation_id, user_id)
+
+    def is_online(self, conversation_id: str, user_id: str) -> bool:
+        return user_id in self.get_participants(conversation_id)
 
 
 manager = ConnectionManager()
@@ -49,6 +66,7 @@ manager = ConnectionManager()
 
 def _message_to_dict(msg: Message) -> dict:
     return {
+        "type": "message",
         "id": str(msg.id),
         "conversation_id": str(msg.conversation_id),
         "sender_id": str(msg.sender_id),
@@ -56,6 +74,7 @@ def _message_to_dict(msg: Message) -> dict:
         "sender_last_name": msg.sender.last_name,
         "sender_profile_picture_url": msg.sender.profile_picture_url,
         "content": msg.content,
+        "image_url": msg.image_url,
         "is_read": msg.is_read,
         "created_at": msg.created_at.isoformat(),
     }
@@ -83,7 +102,15 @@ def _participant_out(user: User) -> dict:
         "email": user.email,
         "profile_picture_url": user.profile_picture_url,
         "title": user.title,
+        # Included so the frontend tier-filter can determine SA vs Company Admin vs User
+        "role": user.role.value.lower() if user.role else "user",
+        "company_name": user.company_name or "",
     }
+
+
+def _is_super_admin(user: User) -> bool:
+    from models.user import UserRole
+    return user.role == UserRole.ADMIN and not user.company_name
 
 
 # ─────────────────────────── REST Endpoints ───────────────────────────
@@ -94,10 +121,14 @@ def search_company_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Search for users within the same company."""
-    if not current_user.company_name:
+    """
+    Return chattable users.
+    - Super Admin: all active users platform-wide (excluding self).
+    - Regular Admin/User: same-company members + the Super Admin.
+    """
+    if not _is_super_admin(current_user) and not current_user.company_name:
         raise HTTPException(status_code=400, detail="You are not assigned to a company.")
-    users = chat_service.get_company_users(db, current_user, search)
+    users = chat_service.get_chattable_users(db, current_user, search)
     return [_participant_out(u) for u in users]
 
 
@@ -107,7 +138,7 @@ def list_conversations(
     current_user: User = Depends(get_current_user),
 ):
     """List all conversations for the current user."""
-    if not current_user.company_name:
+    if not _is_super_admin(current_user) and not current_user.company_name:
         raise HTTPException(status_code=400, detail="You are not assigned to a company.")
     convos = chat_service.get_conversations_for_user(db, current_user)
     return [_build_conversation_out(c, current_user, db) for c in convos]
@@ -119,8 +150,8 @@ def start_or_get_conversation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get or create a conversation with another user in the same company."""
-    if not current_user.company_name:
+    """Get or create a conversation. Super admins can chat cross-company."""
+    if not _is_super_admin(current_user) and not current_user.company_name:
         raise HTTPException(status_code=400, detail="You are not assigned to a company.")
     convo = chat_service.get_or_create_conversation(db, current_user, other_user_id)
     if not convo:
@@ -146,17 +177,42 @@ def get_messages(
 
 
 @router.post("/conversations/{conversation_id}/messages")
-def send_message(
+def send_message_rest(
     conversation_id: uuid.UUID,
     payload: MessageCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Send a message (REST fallback). Also broadcasts via WebSocket."""
-    msg = chat_service.create_message(db, conversation_id, current_user, payload.content)
+    """Send a message (REST fallback when WebSocket is unavailable)."""
+    if not payload.content.strip() and not payload.image_url:
+        raise HTTPException(status_code=422, detail="Message must have content or an image.")
+    msg = chat_service.create_message(
+        db, conversation_id, current_user,
+        content=payload.content,
+        image_url=payload.image_url,
+    )
     if not msg:
         raise HTTPException(status_code=403, detail="Access denied or conversation not found.")
     return _message_to_dict(msg)
+
+
+@router.post("/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Upload an image to Cloudinary and return its URL.
+    The frontend then sends this URL in the message payload.
+    """
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image.")
+    try:
+        from services.video_service import upload_image_to_cloudinary
+        url = upload_image_to_cloudinary(file)
+        return {"url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
 # ─────────────────────────── WebSocket ───────────────────────────
@@ -166,52 +222,129 @@ async def chat_websocket(
     websocket: WebSocket,
     conversation_id: str,
     token: str = Query(...),
-    db: Session = Depends(get_db),
 ):
     """
     WebSocket endpoint for real-time chat.
     Client must pass their JWT as ?token=<jwt> query param.
-    On connect, receive live messages as JSON.
-    To send a message, send JSON: {"content": "hello"}
+
+    NOTE: We do NOT inject `get_db` via Depends here.
+    `get_db` is a synchronous generator that holds a DB connection open for the
+    entire request lifetime. On a long-lived WebSocket this would exhaust the
+    connection pool and deadlock all other HTTP requests (including /auth/login).
+    Instead we open short-lived sessions per DB operation.
+
+    Incoming JSON payloads (from client):
+      {"type": "message", "content": "hello"}
+      {"type": "message", "content": "", "image_url": "https://..."}
+      {"type": "typing_start"}
+      {"type": "typing_stop"}
+      {"type": "read"}
+
+    Outgoing JSON events (to clients):
+      {"type": "message", ...message fields...}
+      {"type": "typing_start", "user_id": "...", "first_name": "..."}
+      {"type": "typing_stop",  "user_id": "..."}
+      {"type": "read", "conversation_id": "...", "reader_id": "..."}
     """
-    from jose import jwt, JWTError
+    from jose import jwt as jose_jwt, JWTError
     from core.security import SECRET_KEY, ALGORITHM
     from services.user_service import get_user_by_email
+    from database.session import SessionLocal
 
-    # Authenticate via token query param
+    # ── Authenticate via token query param ──────────────────────────
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jose_jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
-        current_user = get_user_by_email(db, email)
-        if not current_user:
-            await websocket.close(code=1008)
-            return
     except JWTError:
         await websocket.close(code=1008)
         return
 
-    # Verify conversation membership
-    convo_uuid = uuid.UUID(conversation_id)
-    accessible = chat_service.get_messages(db, convo_uuid, current_user, skip=0, limit=1)
-    if accessible is None:
-        await websocket.close(code=1008)
-        return
+    # Open a short-lived session just for auth + membership check
+    with SessionLocal() as db:
+        current_user = get_user_by_email(db, email)
+        if not current_user:
+            await websocket.close(code=1008)
+            return
 
-    await manager.connect(conversation_id, websocket)
+        convo_uuid = uuid.UUID(conversation_id)
+        convo_obj = db.query(Conversation).filter(Conversation.id == convo_uuid).first()
+        if not convo_obj or not chat_service._user_can_access_convo(convo_obj, current_user):
+            await websocket.close(code=1008)
+            return
+
+        # Capture identity — db session will close after this block
+        user_id_str = str(current_user.id)
+        first_name = current_user.first_name
+
+    await manager.connect(conversation_id, user_id_str, websocket)
+
     try:
         while True:
             data = await websocket.receive_text()
             try:
                 parsed = json.loads(data)
-                content = parsed.get("content", "").strip()
             except Exception:
-                content = data.strip()
+                parsed = {"type": "message", "content": data.strip()}
 
-            if not content:
+            event_type = parsed.get("type", "message")
+
+            # ── Typing indicators ──────────────────────────────────────────
+            if event_type == "typing_start":
+                await manager.broadcast(conversation_id, {
+                    "type": "typing_start",
+                    "user_id": user_id_str,
+                    "first_name": first_name,
+                }, exclude_user_id=user_id_str)
                 continue
 
-            msg = chat_service.create_message(db, convo_uuid, current_user, content)
-            if msg:
-                await manager.broadcast(conversation_id, _message_to_dict(msg))
+            if event_type == "typing_stop":
+                await manager.broadcast(conversation_id, {
+                    "type": "typing_stop",
+                    "user_id": user_id_str,
+                }, exclude_user_id=user_id_str)
+                continue
+
+            # ── Read receipt ───────────────────────────────────────────────
+            if event_type == "read":
+                with SessionLocal() as db:
+                    # Re-fetch user to get a fresh ORM object bound to this session
+                    from services.user_service import get_user_by_email
+                    reader = get_user_by_email(db, email)
+                    if reader:
+                        chat_service.mark_messages_read(db, convo_uuid, reader)
+                await manager.broadcast(conversation_id, {
+                    "type": "read",
+                    "conversation_id": conversation_id,
+                    "reader_id": user_id_str,
+                }, exclude_user_id=user_id_str)
+                continue
+
+            # ── Regular message ────────────────────────────────────────────
+            content = parsed.get("content", "").strip()
+            image_url = parsed.get("image_url", None)
+
+            if not content and not image_url:
+                continue
+
+            with SessionLocal() as db:
+                sender = get_user_by_email(db, email)
+                if sender:
+                    msg = chat_service.create_message(
+                        db, convo_uuid, sender,
+                        content=content,
+                        image_url=image_url,
+                    )
+                    if msg:
+                        msg_dict = _message_to_dict(msg)
+                        # Broadcast to ALL participants (including sender for ID confirmation)
+                        await manager.broadcast(conversation_id, msg_dict)
+
     except WebSocketDisconnect:
-        manager.disconnect(conversation_id, websocket)
+        manager.disconnect(conversation_id, user_id_str)
+        # Notify partner that typing stopped
+        await manager.broadcast(conversation_id, {
+            "type": "typing_stop",
+            "user_id": user_id_str,
+        })
+
+
