@@ -8,7 +8,7 @@ from google.auth.transport import requests
 
 from core.config import settings
 from core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from services.user_service import get_user_by_email, create_google_user
+from services.user_service import get_user_by_email
 
 
 def authenticate_user(db: Session, form_data: OAuth2PasswordRequestForm):
@@ -67,13 +67,9 @@ def authenticate_google_user(db: Session, token: str):
     user = get_user_by_email(db, email=email)
 
     if not user:
-        user = create_google_user(
-            db=db,
-            email=email,
-            first_name=given_name or "Google",
-            last_name=family_name or "User",
-            google_id=google_id,
-            profile_picture_url=picture,
+        raise HTTPException(
+            status_code=403,
+            detail="Account not registered. Please contact your administrator to add your email.",
         )
 
     if not user.is_active:

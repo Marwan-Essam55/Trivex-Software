@@ -86,3 +86,8 @@ class UserOwnProfileUpdate(BaseModel):
 
 class UserResetPassword(BaseModel):
     new_password: str = Field(..., min_length=8)
+
+
+class UserChangePassword(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)

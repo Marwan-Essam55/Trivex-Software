@@ -4,13 +4,29 @@ from main import app
 from core.config import settings
 from unittest.mock import patch
 import logging
+from database.session import SessionLocal
+from models.user import User
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 client = TestClient(app)
 
+def db_cleanup():
+    db = SessionLocal()
+    try:
+        db.query(User).filter(User.email.in_(["standarduser@example.com", "testuser@example.com", "unknown@example.com"])).delete(synchronize_session=False)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Database cleanup warning: {e}")
+    finally:
+        db.close()
+
 def run_tests():
+    logger.info("0. Cleaning up database before tests...")
+    db_cleanup()
+
     logger.info("1. Logging in as admin...")
     response = client.post(
         "/auth/login",
@@ -113,15 +129,14 @@ def run_tests():
             "/auth/google",
             json={"token": "dummy-token-for-mock"}
         )
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-        logger.info("-> Google login with unknown email successfully registered and logged in")
+        assert response.status_code == 403, f"Expected 403, got {response.status_code}"
+        logger.info("-> Google login with unknown email successfully blocked with 403")
         
-        # Clean up the newly created user
+        # Verify the user was NOT created
         users_resp = client.get("/admin/users/", headers=admin_headers)
         for u in users_resp.json():
-            if u["email"] == "unknown@example.com":
-                client.delete(f"/admin/users/{u['id']}", headers=admin_headers)
-        logger.info("-> Cleaned up unknown Google user")
+            assert u["email"] != "unknown@example.com", "Unknown user was created in the database!"
+        logger.info("-> Confirmed unknown Google user was not created in the database")
 
     logger.info("7. Deactivating user and testing login...")
     response = client.post(f"/admin/users/{user_id}/toggle-status", headers=admin_headers)
@@ -153,6 +168,7 @@ def run_tests():
 
 
     logger.info("9. Cleaning up...")
+    client.delete(f"/admin/users/{standard_user_id}", headers=admin_headers)
     client.delete(f"/admin/users/{user_id}", headers=admin_headers)
     logger.info("-> Cleanup complete. All tests passed successfully!")
 
