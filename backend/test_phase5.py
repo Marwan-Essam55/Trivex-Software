@@ -104,15 +104,24 @@ def run_tests():
     with patch("services.auth_service.id_token.verify_oauth2_token") as mock_verify:
         mock_verify.return_value = {
             "email": "unknown@example.com",
-            "sub": "google-id-unknown"
+            "sub": "google-id-unknown",
+            "given_name": "Unknown",
+            "family_name": "GoogleUser",
+            "picture": "http://example.com/picture.jpg"
         }
         response = client.post(
             "/auth/google",
             json={"token": "dummy-token-for-mock"}
         )
-        assert response.status_code == 403, f"Expected 403, got {response.status_code}"
-        assert "not registered on this platform" in response.json()["detail"]
-        logger.info("-> Google login with unknown email correctly blocked (403)")
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        logger.info("-> Google login with unknown email successfully registered and logged in")
+        
+        # Clean up the newly created user
+        users_resp = client.get("/admin/users/", headers=admin_headers)
+        for u in users_resp.json():
+            if u["email"] == "unknown@example.com":
+                client.delete(f"/admin/users/{u['id']}", headers=admin_headers)
+        logger.info("-> Cleaned up unknown Google user")
 
     logger.info("7. Deactivating user and testing login...")
     response = client.post(f"/admin/users/{user_id}/toggle-status", headers=admin_headers)

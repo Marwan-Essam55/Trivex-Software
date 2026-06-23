@@ -132,6 +132,19 @@ def search_company_users(
     return [_participant_out(u) for u in users]
 
 
+@router.get("/unread-count")
+def get_unread_count(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the sum of all unread messages for the current user."""
+    if not _is_super_admin(current_user) and not current_user.company_name:
+        raise HTTPException(status_code=400, detail="You are not assigned to a company.")
+    convos = chat_service.get_conversations_for_user(db, current_user)
+    total_unread = sum(chat_service.count_unread(db, c.id, current_user) for c in convos)
+    return {"unread_count": total_unread}
+
+
 @router.get("/conversations")
 def list_conversations(
     db: Session = Depends(get_db),
