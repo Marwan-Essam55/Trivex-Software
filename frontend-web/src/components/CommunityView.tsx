@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, MessageSquare, Users, X, Paperclip } from 'lucide-react';
+import { Search, Send, MessageSquare, Users, X, Paperclip, ChevronLeft } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 
 import API_BASE from '../config';
@@ -103,6 +103,7 @@ export function CommunityView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -181,6 +182,7 @@ export function CommunityView() {
     await fetchMessages(convo.id);
     setConversations(prev => prev.map(c => c.id === convo.id ? { ...c, unread_count: 0 } : c));
     window.dispatchEvent(new Event('messagesRead'));
+    setShowSidebar(false);
   };
 
   const openChatWithMember = async (user: Participant) => {
@@ -305,7 +307,7 @@ export function CommunityView() {
   const otherUser = selectedConvo ? getOtherParticipant(selectedConvo, myId) : null;
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="flex h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 overflow-hidden">
       <input
         type="file"
         ref={fileInputRef}
@@ -315,10 +317,28 @@ export function CommunityView() {
       />
 
       {/* ── Sidebar ────────────────────────────────────────── */}
-      <aside className="w-80 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col flex-shrink-0 transition-colors">
+      <aside
+        className={`
+          flex-col flex-shrink-0
+          border-r border-slate-200 dark:border-slate-700
+          bg-white dark:bg-slate-800 transition-colors
+          lg:flex lg:w-80
+          ${showSidebar ? 'flex w-full absolute inset-0 z-20 lg:static lg:w-80' : 'hidden lg:flex lg:w-80'}
+        `}
+      >
 
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
+          {selectedConvo && (
+            <button
+              id="community-back-to-chat-btn"
+              onClick={() => setShowSidebar(false)}
+              className="lg:hidden mr-2 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              aria-label="Back to chat"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
           <Users className="w-5 h-5 text-teal-600" />
           <h2 className="font-semibold text-slate-800 dark:text-slate-200">Team Members</h2>
           {allMembers.length > 0 && (
@@ -427,7 +447,13 @@ export function CommunityView() {
       </aside>
 
       {/* ── Main chat panel ──────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-900 transition-colors">
+      <main
+        className={`
+          flex-col min-w-0 bg-slate-50 dark:bg-slate-900 transition-colors
+          lg:flex lg:flex-1
+          ${!showSidebar ? 'flex w-full' : 'hidden lg:flex lg:flex-1'}
+        `}
+      >
         {!selectedConvo ? (
           // Empty state
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
@@ -435,14 +461,30 @@ export function CommunityView() {
               <MessageSquare className="w-10 h-10 text-white" />
             </div>
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Company Community</h3>
-            <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm leading-relaxed">
+            <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm leading-relaxed mb-6">
               Select a team member from the list to start a private conversation within your company workspace.
             </p>
+            <button
+              id="community-browse-members-btn"
+              onClick={() => setShowSidebar(true)}
+              className="lg:hidden inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-xl shadow-sm transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              Browse Team Members
+            </button>
           </div>
         ) : (
           <>
             {/* Chat header */}
-            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center gap-4 flex-shrink-0 transition-colors">
+            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-4 flex items-center gap-3 flex-shrink-0 transition-colors">
+              <button
+                id="community-back-btn"
+                onClick={() => setShowSidebar(true)}
+                className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors flex-shrink-0"
+                aria-label="Back to member list"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
               <div className="relative">
                 <Avatar user={otherUser!} size="lg" />
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-slate-800" />
@@ -480,7 +522,7 @@ export function CommunityView() {
                         )}
                       </div>
                     )}
-                    <div className={`flex flex-col max-w-xs lg:max-w-md xl:max-w-lg ${isMine ? 'items-end' : 'items-start'}`}>
+                    <div className={`flex flex-col max-w-[85%] lg:max-w-md xl:max-w-lg ${isMine ? 'items-end' : 'items-start'}`}>
                       <div
                         className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                           isMine

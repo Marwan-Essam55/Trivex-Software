@@ -616,7 +616,10 @@ export function AdminDashboardView() {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
+      {/* Page shell — w-full so the background fills edge-to-edge, matching the nav bar */}
+      <div className="w-full">
+      {/* Inner container — identical padding token set as Navigation's inner div */}
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -633,7 +636,7 @@ export function AdminDashboardView() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
           <StatCard label="TOTAL USERS" value={loading ? '—' : totalUsers} icon={Users} />
           <StatCard label="ACTIVE" value={loading ? '—' : activeUsers} icon={CheckCircle2} accent />
           <StatCard label="INACTIVE" value={loading ? '—' : inactiveUsers} icon={XCircle} danger />
@@ -691,7 +694,7 @@ export function AdminDashboardView() {
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your search or filters.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto w-full">
               <table className="w-full text-sm" id="users-table">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
@@ -767,6 +770,7 @@ export function AdminDashboardView() {
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {/* Modals */}
