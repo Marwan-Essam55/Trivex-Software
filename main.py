@@ -1,0 +1,50 @@
+import os
+import models
+
+import cloudinary
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from controllers.auth_controller import router as auth_router
+from controllers.user_controller import router as user_router
+from controllers.admin_user_controller import router as admin_user_router
+from controllers.video_controller import router as video_router
+from controllers.chat_controller import router as chat_router
+
+load_dotenv()
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+)
+
+app = FastAPI(title="Trivex API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+def read_root():
+    return {"status": "operational", "service": "trivex-api"}
+
+
+app.include_router(auth_router)
+app.include_router(user_router)
+app.include_router(admin_user_router)
+app.include_router(video_router)
+app.include_router(chat_router)
