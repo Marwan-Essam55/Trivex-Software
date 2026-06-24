@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Activity, Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { GoogleLogin } from '@react-oauth/google';
@@ -128,6 +128,15 @@ export function LoginView() {
                 <span className="ml-2 font-bold text-2xl text-slate-900 dark:text-white tracking-wider uppercase">TriVex</span>
               </div>
             </div>
+            <button
+              id="back-to-home-btn"
+              type="button"
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-1.5 mb-6 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 group"
+            >
+              <Home className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform duration-200" />
+              Back to Home
+            </button>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Access Workspace</h1>
             <p className="mt-2 text-slate-500 dark:text-slate-400">Authenticate to enter the secure environment.</p>
           </div>
