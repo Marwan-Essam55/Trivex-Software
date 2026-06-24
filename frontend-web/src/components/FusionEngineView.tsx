@@ -34,6 +34,7 @@ interface AnalysisResults {
   confidence_score: number | null;
   reliability_score: number | null;
   nlp_summary: string | null;
+  kinematic_state?: string | null;
   emotion_breakdown: EmotionBreakdown | null;
   experta_conclusions: ExpertaConclusion[] | null;
   timeline_segments: TimelineSegment[] | null;
@@ -163,7 +164,7 @@ function ExpertaPanel({ conclusions }: { conclusions: ExpertaConclusion[] }) {
   return (
     <div className="space-y-3">
       {conclusions.map((c, i) => (
-        <div key={i} className="flex gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <div key={i} className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg">
           <Zap className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-0.5">{c.rule}</p>
@@ -267,8 +268,8 @@ export function FusionEngineView() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Analysis Engine Output</h1>
-            <p className="text-sm text-slate-500 mt-1 font-mono text-xs truncate max-w-xs">{filename}</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Analysis Engine Output</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-mono text-xs truncate max-w-xs">{filename}</p>
           </div>
         </div>
         <span className={`inline-flex items-center px-3 py-1 rounded-md border text-xs font-semibold uppercase tracking-wider ${badge.cls}`}>
@@ -327,9 +328,9 @@ export function FusionEngineView() {
                 { label: 'Duration',  value: video.duration_seconds ? fmtTime(video.duration_seconds) : '—' },
                 { label: 'Status',    value: video.status },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{label}</p>
-                  <p className="text-sm font-semibold text-slate-900 truncate" title={value}>{value}</p>
+                <div key={label} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate" title={value}>{value}</p>
                 </div>
               ))}
             </div>
@@ -342,8 +343,8 @@ export function FusionEngineView() {
 
             {/* Emotion breakdown bars */}
             {ar?.emotion_breakdown && (
-              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">
                   Emotion Probability Distribution
                 </h3>
                 <EmotionBreakdownChart breakdown={ar.emotion_breakdown} />
@@ -352,8 +353,8 @@ export function FusionEngineView() {
 
             {/* Experta conclusions */}
             {ar?.experta_conclusions && ar.experta_conclusions.length > 0 && (
-              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
                   <Brain className="w-3.5 h-3.5 text-indigo-500" />
                   Experta Rule Engine — Conclusions
                 </h3>
@@ -364,11 +365,11 @@ export function FusionEngineView() {
 
           {/* ── Right sidebar ── */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg border border-slate-200 p-6 sm:p-8 h-full flex flex-col shadow-sm">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 sm:p-8 h-full flex flex-col shadow-sm transition-colors duration-200">
 
-              <div className="mb-8 text-center border-b border-slate-100 pb-6">
-                <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Primary Assessment</h2>
-                <p className="text-2xl font-bold text-slate-900 leading-tight capitalize">
+              <div className="mb-8 text-center border-b border-slate-100 dark:border-slate-700 pb-6">
+                <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Primary Assessment</h2>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white leading-tight capitalize">
                   {ar?.dominant_emotion ? `${capitalize(ar.dominant_emotion)} ${getLabel(ar.dominant_emotion)}` : 'Completed'}
                 </p>
               </div>
