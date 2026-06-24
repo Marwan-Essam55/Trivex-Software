@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User, Mail, Shield, Key, LogOut, Loader2, CheckCircle2, AlertTriangle, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:8000';
+import API_BASE from '../config';
 
 interface UserProfile {
   id: string;

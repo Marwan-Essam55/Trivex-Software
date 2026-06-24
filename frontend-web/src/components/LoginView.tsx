@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { GoogleLogin } from '@react-oauth/google';
 import type { CredentialResponse } from '@react-oauth/google';
+import API_BASE from '../config';
 
 export function LoginView() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export function LoginView() {
       formData.append('username', email.trim());
       formData.append('password', password);
 
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -66,7 +67,7 @@ export function LoginView() {
     setGoogleLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8000/auth/google', {
+      const response = await fetch(`${API_BASE}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: credentialResponse.credential }),

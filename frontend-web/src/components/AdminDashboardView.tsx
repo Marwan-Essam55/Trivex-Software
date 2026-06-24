@@ -5,7 +5,7 @@ import {
   ChevronDown, AlertTriangle, Loader2, Key, ToggleLeft, UserCheck,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+import API_BASE from '../config';
 
 type UserRole = 'ADMIN' | 'USER' | 'admin' | 'user';
 
@@ -131,7 +131,7 @@ function CreateUserModal({
         company_name: isSuperAdmin ? form.company_name : undefined,
         title: isSuperAdmin ? 'Admin' : form.title || undefined,
       };
-      const res = await fetch(`${API_BASE}/admin/users`, {
+      const res = await fetch(`${API_BASE}/admin/users/`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(payload),
@@ -569,7 +569,7 @@ export function AdminDashboardView() {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`${API_BASE}/admin/users`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/admin/users/`, { headers: authHeaders() });
       if (!res.ok) throw new Error('Failed to fetch users');
       const data: UserProfile[] = await res.json();
       setUsers(data);

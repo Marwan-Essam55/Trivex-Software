@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { useTheme } from '../contexts/ThemeContext';
+import API_BASE from '../config';
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,7 +17,7 @@ export function Navigation() {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) return;
-        const res = await fetch('http://127.0.0.1:8000/community/unread-count', {
+        const res = await fetch(`${API_BASE}/community/unread-count`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {

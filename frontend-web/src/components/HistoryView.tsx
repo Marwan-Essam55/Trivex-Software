@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, CheckCircle2, Clock, AlertTriangle, Video, Loader2, FileVideo, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:8000';
+import API_BASE from '../config';
 const POLL_INTERVAL_MS = 4000;
 
 interface AnalysisResults {

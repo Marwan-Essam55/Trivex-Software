@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Send, MessageSquare, Users, X, Paperclip } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 
-const API = 'http://127.0.0.1:8000';
+import API_BASE from '../config';
+const API = API_BASE;
 
 interface Participant {
   id: string;
@@ -127,7 +128,8 @@ export function CommunityView() {
     if (!selectedConvo) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${protocol}://127.0.0.1:8000/community/ws/${selectedConvo.id}?token=${getToken()}`);
+    const wsHost = API.replace(/^https?:\/\//, '');
+    const ws = new WebSocket(`${protocol}://${wsHost}/community/ws/${selectedConvo.id}?token=${getToken()}`);
     wsRef.current = ws;
 
     ws.onmessage = (e) => {
