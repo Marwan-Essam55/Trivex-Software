@@ -1,4 +1,4 @@
-console.log("🔥 VITE_API_URL IS:", import.meta.env.VITE_API_URL);
+console.log("🔥 VITE_API_URL IS:", 'https://marwanessam55-trivex-backend.hf.space');
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';

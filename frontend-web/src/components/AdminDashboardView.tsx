@@ -555,7 +555,7 @@ export function AdminDashboardView() {
 
   const fetchCurrentUser = useCallback(async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, { headers: authHeaders() });
+      const res = await fetch('https://marwanessam55-trivex-backend.hf.space/auth/me', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data);

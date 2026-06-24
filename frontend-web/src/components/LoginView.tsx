@@ -23,7 +23,7 @@ export function LoginView() {
       formData.append('username', email.trim());
       formData.append('password', password);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const response = await fetch('https://marwanessam55-trivex-backend.hf.space/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -66,7 +66,7 @@ export function LoginView() {
     setGoogleLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+      const response = await fetch('https://marwanessam55-trivex-backend.hf.space/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: credentialResponse.credential }),
