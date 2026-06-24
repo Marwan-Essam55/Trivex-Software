@@ -5,7 +5,7 @@ import {
   ChevronDown, AlertTriangle, Loader2, Key, ToggleLeft, UserCheck,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+import API_BASE from '../config';
 
 type UserRole = 'ADMIN' | 'USER' | 'admin' | 'user';
 
@@ -41,31 +41,31 @@ function StatCard({
   danger?: boolean;
 }) {
   const iconBg = danger
-    ? 'bg-red-50 text-red-600 border-red-100'
+    ? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/50'
     : accent
-    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-    : 'bg-slate-100 text-slate-700 border-slate-200';
+    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50'
+    : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600';
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-6 flex items-center shadow-sm">
-      <div className={`p-3 rounded-md border mr-4 ${iconBg}`}>
+    <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 flex items-center shadow-sm transition-colors duration-200">
+      <div className={`p-3 rounded-md border me-4 ${iconBg}`}>
         <Icon className="w-5 h-5" />
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-        <p className="text-2xl font-bold text-slate-900">{value}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
       </div>
     </div>
   );
 }
 
-function RoleBadge({ role }: { role: UserRole }) {
+export function RoleBadge({ role }: { role: UserRole }) {
   const isAdmin = role.toUpperCase() === 'ADMIN';
   return isAdmin ? (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-700 text-xs font-semibold">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
       <Shield className="w-3 h-3" /> Admin
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-500 text-xs font-medium">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-medium">
       <UserCheck className="w-3 h-3" /> User
     </span>
   );
@@ -73,11 +73,11 @@ function RoleBadge({ role }: { role: UserRole }) {
 
 function StatusBadge({ active }: { active: boolean }) {
   return active ? (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
       <CheckCircle2 className="w-3 h-3" /> Active
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 text-xs font-semibold">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs font-semibold">
       <XCircle className="w-3 h-3" /> Inactive
     </span>
   );
@@ -86,7 +86,7 @@ function StatusBadge({ active }: { active: boolean }) {
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{label}</label>
       {children}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
@@ -94,7 +94,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 }
 
 const inputCls =
-  'w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-colors';
+  'w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-teal-500 focus:border-slate-900 dark:focus:border-teal-500 transition-colors';
 
 function CreateUserModal({
   isSuperAdmin,
@@ -129,9 +129,9 @@ function CreateUserModal({
         ...form,
         role: (isSuperAdmin ? 'ADMIN' : 'USER'),
         company_name: isSuperAdmin ? form.company_name : undefined,
-        title: !isSuperAdmin ? form.title : undefined,
+        title: isSuperAdmin ? 'Admin' : form.title || undefined,
       };
-      const res = await fetch(`${API_BASE}/admin/users`, {
+      const res = await fetch(`${API_BASE}/admin/users/`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(payload),
@@ -150,27 +150,37 @@ function CreateUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-md transition-colors duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-slate-700" />
-            <h2 className="text-base font-bold text-slate-900">Create New User</h2>
+            <UserPlus className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Create New User</h2>
           </div>
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-sm text-red-700 dark:text-red-400 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />{error}
             </div>
           )}
           {isSuperAdmin ? (
-            <Field label="Company Name">
-              <input className={inputCls} value={form.company_name} onChange={e => set('company_name', e.target.value)} required />
-            </Field>
+            <>
+              <Field label="Company">
+                <input className={inputCls} value={form.company_name} onChange={e => set('company_name', e.target.value)} required />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="First Name">
+                  <input className={inputCls} value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
+                </Field>
+                <Field label="Last Name">
+                  <input className={inputCls} value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
+                </Field>
+              </div>
+            </>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3">
@@ -181,7 +191,7 @@ function CreateUserModal({
                   <input className={inputCls} value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
                 </Field>
               </div>
-              <Field label="Job Title / Title">
+              <Field label="Title">
                 <input className={inputCls} value={form.title} onChange={e => set('title', e.target.value)} required />
               </Field>
             </>
@@ -199,19 +209,19 @@ function CreateUserModal({
                 minLength={8}
                 required
               />
-              <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700" onClick={() => setShowPw(v => !v)}>
+              <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-355" onClick={() => setShowPw(v => !v)}>
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </Field>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+              className="flex-1 px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-sm font-semibold hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
               Create User
@@ -310,7 +320,7 @@ function EditUserModal({
       const updated: UserProfile = await res.json();
       setIsActive(updated.is_active);
       onUpdated(updated);
-      setStatusMsg({ type: 'ok', text: `User is now ${updated.is_active ? 'active' : 'inactive'}.` });
+      setStatusMsg({ type: 'ok', text: `User is now ${updated.is_active ? 'Active' : 'Inactive'}.` });
     } catch (err: any) {
       setStatusMsg({ type: 'err', text: err.message });
     } finally { setStatusLoading(false); }
@@ -318,37 +328,47 @@ function EditUserModal({
 
   const Msg = ({ m }: { m: { type: 'ok' | 'err'; text: string } | null }) =>
     m ? (
-      <p className={`text-xs mt-2 flex items-center gap-1 ${m.type === 'ok' ? 'text-emerald-700' : 'text-red-600'}`}>
+      <p className={`text-xs mt-2 flex items-center gap-1 ${m.type === 'ok' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
         {m.type === 'ok' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
         {m.text}
       </p>
     ) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transition-colors duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Edit User</h2>
-            <p className="text-xs text-slate-500 mt-0.5">{user.first_name} {user.last_name} · {user.email}</p>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Edit User</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5" dir="ltr">{user.first_name} {user.last_name} · {user.email}</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-250 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1 p-6 space-y-6">
           {/* ── Section 1: Basic Info ── */}
-          <section className="border border-slate-200 rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <Edit2 className="w-3.5 h-3.5 text-slate-600" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Basic Information</span>
+          <section className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+              <Edit2 className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Basic Information</span>
             </div>
             <form onSubmit={handleInfoSave} className="p-4 space-y-3">
               {isSuperAdmin ? (
-                <Field label="Company Name">
-                  <input className={inputCls} value={info.company_name} onChange={e => setInfoField('company_name', e.target.value)} required />
-                </Field>
+                <>
+                  <Field label="Company">
+                    <input className={inputCls} value={info.company_name} onChange={e => setInfoField('company_name', e.target.value)} required />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="First Name">
+                      <input className={inputCls} value={info.first_name} onChange={e => setInfoField('first_name', e.target.value)} required />
+                    </Field>
+                    <Field label="Last Name">
+                      <input className={inputCls} value={info.last_name} onChange={e => setInfoField('last_name', e.target.value)} required />
+                    </Field>
+                  </div>
+                </>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-3">
@@ -359,7 +379,7 @@ function EditUserModal({
                       <input className={inputCls} value={info.last_name} onChange={e => setInfoField('last_name', e.target.value)} required />
                     </Field>
                   </div>
-                  <Field label="Job Title / Title">
+                  <Field label="Title">
                     <input className={inputCls} value={info.title} onChange={e => setInfoField('title', e.target.value)} required />
                   </Field>
                 </>
@@ -372,7 +392,7 @@ function EditUserModal({
                 <button
                   type="submit"
                   disabled={infoLoading}
-                  className="ml-auto px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                  className="ml-auto px-4 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-xs font-semibold hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors flex items-center gap-1.5 disabled:opacity-60"
                 >
                   {infoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Save Changes
                 </button>
@@ -381,10 +401,10 @@ function EditUserModal({
           </section>
 
           {/* ── Section 2: Reset Password ── */}
-          <section className="border border-slate-200 rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <Key className="w-3.5 h-3.5 text-slate-600" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Reset Password</span>
+          <section className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+              <Key className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Reset Password</span>
             </div>
             <form onSubmit={handlePasswordReset} className="p-4 space-y-3">
               <Field label="New Password">
@@ -397,7 +417,7 @@ function EditUserModal({
                     minLength={8}
                     required
                   />
-                  <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700" onClick={() => setShowPw(v => !v)}>
+                  <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-355" onClick={() => setShowPw(v => !v)}>
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -416,7 +436,7 @@ function EditUserModal({
                 <button
                   type="submit"
                   disabled={pwLoading}
-                  className="ml-auto px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                  className="ml-auto px-4 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-xs font-semibold hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors flex items-center gap-1.5 disabled:opacity-60"
                 >
                   {pwLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />} Reset Password
                 </button>
@@ -424,14 +444,14 @@ function EditUserModal({
             </form>
           </section>
 
-          <section className="border border-slate-200 rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <ToggleLeft className="w-3.5 h-3.5 text-slate-600" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Account Status</span>
+          <section className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+              <ToggleLeft className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Account Status</span>
             </div>
             <div className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Current Status</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Current Status</p>
                 <div className="mt-1"><StatusBadge active={isActive} /></div>
                 <Msg m={statusMsg} />
               </div>
@@ -441,8 +461,8 @@ function EditUserModal({
                 onClick={handleToggleStatus}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors disabled:opacity-60 ${
                   isActive
-                    ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
-                    : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    ? 'border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
+                    : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
                 }`}
               >
                 {statusLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isActive ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
@@ -489,22 +509,21 @@ function DeleteConfirmDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-sm p-6">
-        <div className="flex items-center justify-center w-12 h-12 bg-red-50 border border-red-200 rounded-full mx-auto mb-4">
-          <Trash2 className="w-5 h-5 text-red-600" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-sm p-6 transition-colors duration-200">
+        <div className="flex items-center justify-center w-12 h-12 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-full mx-auto mb-4">
+          <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
         </div>
-        <h2 className="text-base font-bold text-slate-900 text-center">Delete User</h2>
-        <p className="text-sm text-slate-500 text-center mt-2">
-          Are you sure you want to permanently delete{' '}
-          <span className="font-semibold text-slate-800">{user.first_name} {user.last_name}</span>?
-          This action cannot be undone.
+        <h2 className="text-base font-bold text-slate-900 dark:text-white text-center">Delete User</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-2">
+          Are you sure you want to permanently delete {user.first_name} {user.last_name}?
+          {' '}This action cannot be undone.
         </p>
         {error && (
-          <div className="mt-3 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 text-center">{error}</div>
+          <div className="mt-3 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-xs text-red-700 dark:text-red-400 text-center">{error}</div>
         )}
         <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+          <button onClick={onClose} className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
             Cancel
           </button>
           <button
@@ -536,7 +555,7 @@ export function AdminDashboardView() {
 
   const fetchCurrentUser = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, { headers: authHeaders() });
+      const res = await fetch('https://marwanessam55-trivex-backend.hf.space/auth/me', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data);
@@ -550,7 +569,7 @@ export function AdminDashboardView() {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`${API_BASE}/admin/users`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/admin/users/`, { headers: authHeaders() });
       if (!res.ok) throw new Error('Failed to fetch users');
       const data: UserProfile[] = await res.json();
       setUsers(data);
@@ -601,46 +620,46 @@ export function AdminDashboardView() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              {isSuperAdmin ? 'User Management' : (currentUser?.company_name || 'Company Dashboard')}
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              {isSuperAdmin ? "User Management" : (currentUser?.company_name || "Company Dashboard")}
             </h1>
-            <p className="text-sm text-slate-500 mt-1">Manage platform users, roles, and access control.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage platform users, roles, and access control.</p>
           </div>
           <button
             id="btn-create-user"
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-sm flex-shrink-0"
           >
             <UserPlus className="w-4 h-4" /> New User
           </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-          <StatCard label="Total Users" value={loading ? '—' : totalUsers} icon={Users} />
-          <StatCard label="Active" value={loading ? '—' : activeUsers} icon={CheckCircle2} accent />
-          <StatCard label="Inactive" value={loading ? '—' : inactiveUsers} icon={XCircle} danger />
+          <StatCard label="TOTAL USERS" value={loading ? '—' : totalUsers} icon={Users} />
+          <StatCard label="ACTIVE" value={loading ? '—' : activeUsers} icon={CheckCircle2} accent />
+          <StatCard label="INACTIVE" value={loading ? '—' : inactiveUsers} icon={XCircle} danger />
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-colors duration-200">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <input
                 id="search-users"
                 type="text"
                 placeholder="Search by name or email…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-colors"
+                className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-teal-500 focus:border-slate-900 dark:focus:border-teal-500 transition-colors"
               />
             </div>
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <select
                 id="filter-status"
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value as any)}
-                className="pl-9 pr-8 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 appearance-none text-slate-700 font-medium transition-colors"
+                className="pl-9 pr-8 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-teal-500 appearance-none text-slate-700 dark:text-slate-300 font-medium transition-colors"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -652,87 +671,87 @@ export function AdminDashboardView() {
 
           {fetchError ? (
             <div className="px-6 py-16 flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mb-3">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
+              <div className="w-12 h-12 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-full flex items-center justify-center mb-3">
+                <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400" />
               </div>
-              <p className="text-sm font-semibold text-slate-700">Failed to load users</p>
-              <p className="text-xs text-slate-500 mt-1">{fetchError}</p>
-              <button onClick={fetchUsers} className="mt-4 px-4 py-2 text-sm font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Failed to load users</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{fetchError}</p>
+              <button onClick={fetchUsers} className="mt-4 px-4 py-2 text-sm font-semibold bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors">
                 Retry
               </button>
             </div>
           ) : loading ? (
             <div className="px-6 py-16 flex flex-col items-center">
               <Loader2 className="w-6 h-6 text-slate-400 animate-spin mb-3" />
-              <p className="text-sm text-slate-500">Loading users…</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading users…</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="px-6 py-16 flex flex-col items-center">
-              <Users className="w-8 h-8 text-slate-300 mb-3" />
-              <p className="text-sm font-semibold text-slate-600">No users found</p>
-              <p className="text-xs text-slate-400 mt-1">Try adjusting your search or filters.</p>
+              <Users className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-3" />
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No users found</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your search or filters.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm" id="users-table">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      {isSuperAdmin ? 'Company' : 'Title'}
+                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {isSuperAdmin ? "Company" : "Title"}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Credits</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Credits</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {filtered.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600 dark:text-slate-300">
                             {u.role.toUpperCase() === 'ADMIN' && u.company_name ? u.company_name[0].toUpperCase() : `${u.first_name[0]}${u.last_name[0]}`}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900">
+                            <p className="font-semibold text-slate-900 dark:text-white">
                               {u.role.toUpperCase() === 'ADMIN' && u.company_name ? u.company_name : `${u.first_name} ${u.last_name}`}
                             </p>
-                            <p className="text-xs text-slate-500">{u.email}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400" dir="ltr">{u.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         {isSuperAdmin ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 text-xs font-semibold">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-xs font-semibold">
                             {u.company_name || 'N/A'}
                           </span>
                         ) : (
-                          <span className="text-slate-600 text-xs font-medium">
+                          <span className="text-slate-600 dark:text-slate-300 text-xs font-medium">
                             {u.title || 'N/A'}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4"><StatusBadge active={u.is_active} /></td>
-                      <td className="px-6 py-4 text-slate-700 font-medium">{u.available_credits.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-slate-700 dark:text-slate-300 font-medium">{u.available_credits.toLocaleString()}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             id={`btn-edit-${u.id}`}
                             onClick={() => setEditUser(u)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-300 rounded-md hover:bg-slate-100 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
                           {u.email === 'admin@admin.com' || u.id === currentUser?.id ? (
-                            <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-400 border border-slate-200 rounded-md bg-slate-50 cursor-not-allowed select-none" title="Cannot delete master admin or current user">
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-800 rounded-md bg-slate-50 dark:bg-slate-900 cursor-not-allowed select-none" title="Cannot delete master admin or current user">
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </span>
                           ) : (
                             <button
                               id={`btn-delete-${u.id}`}
                               onClick={() => setDeleteUser(u)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
@@ -743,9 +762,9 @@ export function AdminDashboardView() {
                   ))}
                 </tbody>
               </table>
-              <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                <p className="text-xs text-slate-500">
-                  Showing <span className="font-semibold text-slate-700">{filtered.length}</span> of <span className="font-semibold text-slate-700">{totalUsers}</span> users
+              <div className="px-6 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Showing {filtered.length} of {totalUsers} users
                 </p>
               </div>
             </div>

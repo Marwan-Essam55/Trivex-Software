@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, CheckCircle2, Clock, AlertTriangle, Video, Loader2, FileVideo, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:8000';
+import API_BASE from '../config';
 const POLL_INTERVAL_MS = 4000;
 
 interface AnalysisResults {
@@ -155,8 +155,8 @@ export function HistoryView() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Analysis Archive</h1>
-          <p className="text-sm text-slate-500 mt-1">Review historical multi-modal assessments and metrics.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Analysis Archive</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Review historical multi-modal assessments and metrics.</p>
         </div>
 
         <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -169,7 +169,7 @@ export function HistoryView() {
               placeholder="Search ID or name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 w-full sm:w-64 transition-colors shadow-sm"
+              className="pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-teal-500 focus:border-slate-900 dark:focus:border-teal-500 w-full sm:w-64 transition-colors shadow-sm"
               id="search-history"
             />
           </div>
@@ -195,17 +195,17 @@ export function HistoryView() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-200">
         {loading ? (
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead className="bg-slate-50 dark:bg-slate-900">
               <tr>
                 {['Preview','Asset Name','Date','Size','Duration','Status',''].map(h => (
-                  <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
               {[...Array(3)].map((_, i) => <SkeletonRow key={i} />)}
             </tbody>
           </table>
@@ -223,26 +223,26 @@ export function HistoryView() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Preview</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Asset Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Size</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Duration</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Preview</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Asset Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Size</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Duration</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
                   <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
                 {filteredVideos.map((item) => {
                   const isProcessing = item.status.toUpperCase() === 'PROCESSING' || item.status.toUpperCase() === 'PENDING';
                   const isCompleted  = item.status.toUpperCase() === 'COMPLETED';
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-slate-50 transition-colors group ${isProcessing ? 'bg-violet-50/30' : ''}`}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors group ${isProcessing ? 'bg-violet-50/30 dark:bg-violet-900/10' : ''}`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.file_path ? (
@@ -259,7 +259,7 @@ export function HistoryView() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-slate-900">
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">
                           {item.original_filename || `Video ${item.id.slice(0, 8)}`}
                         </div>
                         {isProcessing && (

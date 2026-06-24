@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
-from schemas.user_schema import UserProfileResponse, UserOwnProfileUpdate
+from schemas.user_schema import UserProfileResponse, UserOwnProfileUpdate, UserChangePassword
 from models.user import User
 from database.session import get_db
-from core.security import get_current_user
+from core.security import get_current_user, verify_password, get_password_hash
 from services import user_service
 from services.video_service import upload_image_to_cloudinary
 
@@ -51,4 +51,25 @@ async def upload_avatar(
         return current_user
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Avatar upload failed: {str(e)}")
+
+
+@router.post("/change-password")
+def change_password(
+    payload: UserChangePassword,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Change the logged-in user's password.
+    """
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=400,
+            detail="Incorrect current password"
+        )
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return {"message": "Password changed successfully"}
 

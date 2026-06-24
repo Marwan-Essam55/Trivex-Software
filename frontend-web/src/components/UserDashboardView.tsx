@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { UploadCloud, Video, BarChart3, Activity, CheckCircle2, Clock, PlayCircle, Loader2, AlertTriangle, X, FileVideo, Square, CameraOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:8000';
+import API_BASE from '../config';
 
 interface VideoRecord {
   id: string;
@@ -70,11 +70,11 @@ export function UserDashboardView() {
 
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith('video/') && !file.type.startsWith('audio/')) {
-      setUploadError('Please select a video file (MP4, MOV, AVI) or audio file (MP3, WAV).');
+      setUploadError("Please select a video file (MP4, MOV, AVI) or audio file (MP3, WAV).");
       return;
     }
     if (file.size > 2 * 1024 * 1024 * 1024) {
-      setUploadError('File size exceeds the 2GB limit.');
+      setUploadError("File size exceeds the 2GB limit.");
       return;
     }
     setSelectedFile(file);
@@ -110,7 +110,7 @@ export function UserDashboardView() {
 
     } catch (err: any) {
       setUploadState('error');
-      setUploadError(err.message || 'An unexpected error occurred.');
+      setUploadError(err.message || "An unexpected error occurred.");
       setSelectedFile(null);
     }
   };
@@ -218,9 +218,9 @@ export function UserDashboardView() {
 
     } catch (err: any) {
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setRecordingError('Camera/microphone permission denied. Please allow access and try again.');
+        setRecordingError("Camera/microphone permission denied. Please allow access and try again.");
       } else if (err.name === 'NotFoundError') {
-        setRecordingError('No camera or microphone found on this device.');
+        setRecordingError("No camera or microphone found on this device.");
       } else {
         setRecordingError(`Recording failed: ${err.message || 'Unknown error'}`);
       }
@@ -239,10 +239,12 @@ export function UserDashboardView() {
     const diffMs = now.getTime() - d.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
 
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     if (diffHours < 24) {
-      return `Today, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      return `Today, ${timeStr}`;
     } else if (diffHours < 48) {
-      return `Yesterday, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      return `Yesterday, ${timeStr}`;
     }
     return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
   };
@@ -262,41 +264,41 @@ export function UserDashboardView() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Workspace</h1>
-        <p className="text-sm text-slate-500">Monitor your data processing and analytical workloads.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">My Workspace</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Monitor your data processing and analytical workloads.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg border border-slate-200 p-6 flex items-center shadow-sm">
-          <div className="p-3 rounded-md bg-slate-100 text-slate-700 mr-4 border border-slate-200">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 flex items-center shadow-sm">
+          <div className="p-3 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 mr-4 border border-slate-200 dark:border-slate-600">
             <Video className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Videos</p>
-            <p className="text-2xl font-bold text-slate-900">{loadingVideos ? '—' : totalVideos}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Videos</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{loadingVideos ? '—' : totalVideos}</p>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-6 flex items-center shadow-sm">
-          <div className="p-3 rounded-md bg-slate-100 text-slate-700 mr-4 border border-slate-200">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 flex items-center shadow-sm">
+          <div className="p-3 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 mr-4 border border-slate-200 dark:border-slate-600">
             <BarChart3 className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Completed</p>
-            <p className="text-2xl font-bold text-slate-900">{loadingVideos ? '—' : completedVideos}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Completed</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{loadingVideos ? '—' : completedVideos}</p>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-6 flex items-center shadow-sm">
-          <div className="p-3 rounded-md bg-emerald-50 text-emerald-700 mr-4 border border-emerald-100">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 flex items-center shadow-sm">
+          <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 mr-4 border border-emerald-100 dark:border-emerald-800">
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Engine Status</p>
-            <p className="text-2xl font-bold text-slate-900">Operational</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Engine Status</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">Operational</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-slate-200 p-8 sm:p-12 mb-8 flex flex-col items-center justify-center text-center shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8 sm:p-12 mb-8 flex flex-col items-center justify-center text-center shadow-sm transition-colors duration-200">
         <input
           ref={fileInputRef}
           type="file"
@@ -311,8 +313,8 @@ export function UserDashboardView() {
             <div
               className={`w-full max-w-3xl border-2 border-dashed rounded-lg p-10 transition-all duration-200 cursor-pointer group flex flex-col items-center ${
                 dragOver
-                  ? 'border-slate-900 bg-slate-50'
-                  : 'border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+                  ? 'border-slate-900 dark:border-teal-500 bg-slate-50 dark:bg-slate-700'
+                  : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-500'
               }`}
               onClick={handleBrowseClick}
               onDrop={handleDrop}
@@ -320,11 +322,11 @@ export function UserDashboardView() {
               onDragLeave={handleDragLeave}
               id="dropzone"
             >
-              <div className="w-16 h-16 bg-white border border-slate-200 group-hover:border-slate-300 rounded-lg flex items-center justify-center mb-5 shadow-sm transition-colors">
-                <UploadCloud className={`w-8 h-8 transition-colors ${dragOver ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'}`} />
+              <div className="w-16 h-16 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 group-hover:border-slate-300 rounded-lg flex items-center justify-center mb-5 shadow-sm transition-colors">
+                <UploadCloud className={`w-8 h-8 transition-colors ${dragOver ? 'text-slate-900 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'}`} />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Ingest Media File</h3>
-              <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Ingest Media File</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
                 Drag and drop your asset here, or click to browse. Supported formats: MP4, MOV, AVI, MP3, WAV. Maximum size: 2GB.
               </p>
               <button
@@ -396,7 +398,7 @@ export function UserDashboardView() {
               id="btn-stop-upload"
             >
               <Square className="w-4 h-4" />
-              Stop &amp; Upload
+              Stop & Upload
             </button>
             <p className="mt-2 text-xs text-slate-400">Recording will be submitted to the analysis engine</p>
           </div>
@@ -453,11 +455,11 @@ export function UserDashboardView() {
         )}
       </div>
 
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Recent Ingestions</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm transition-colors duration-200">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">Recent Ingestions</h3>
         </div>
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700">
           {loadingVideos ? (
             <div className="px-6 py-8 flex items-center justify-center">
               <Loader2 className="w-5 h-5 text-slate-400 animate-spin mr-2" />
@@ -480,10 +482,10 @@ export function UserDashboardView() {
                     <Video className="w-4 h-4 text-slate-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-slate-900" dir="ltr">
                       {video.original_filename || `Video ${video.id.slice(0, 8)}`}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5" dir="ltr">
                       {formatDate(video.uploaded_at)}
                       {video.file_size_mb && ` · ${video.file_size_mb} MB`}
                     </p>

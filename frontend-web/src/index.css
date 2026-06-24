@@ -4,6 +4,25 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 antialiased font-sans;
+    @apply bg-slate-50 text-slate-800 antialiased font-sans transition-colors duration-200;
+  }
+  .dark body {
+    @apply bg-slate-900 text-slate-100;
+  }
+
+  /* RTL: switch to Cairo for Arabic typography */
+  [dir="rtl"] body,
+  [dir="rtl"] * {
+    font-family: 'Cairo', 'system-ui', sans-serif;
+  }
+
+  /* Autofill overrides for dark mode */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
+  .dark input:-webkit-autofill:active {
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0px 1000px #1e293b inset !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }

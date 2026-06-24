@@ -33,3 +33,5 @@ passlib[bcrypt]
 bcrypt
 google-auth
 requests
+psycopg2-binary
+moviepy>=1.0.3

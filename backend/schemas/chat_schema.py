@@ -5,7 +5,8 @@ from typing import Optional, List
 
 
 class MessageCreate(BaseModel):
-    content: str
+    content: str = ""
+    image_url: Optional[str] = None  # Cloudinary URL for image messages
 
 
 class MessageOut(BaseModel):
@@ -16,6 +17,7 @@ class MessageOut(BaseModel):
     sender_last_name: str
     sender_profile_picture_url: Optional[str] = None
     content: str
+    image_url: Optional[str] = None
     is_read: bool
     created_at: datetime
 

@@ -1,3 +1,4 @@
+console.log("🔥 VITE_API_URL IS:", 'https://marwanessam55-trivex-backend.hf.space');
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -12,6 +13,9 @@ import { HistoryView } from './components/HistoryView';
 import { AccountView } from './components/AccountView';
 import { CommunityView } from './components/CommunityView';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { UnreadProvider } from './UnreadContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -47,7 +51,7 @@ function AppContent() {
   }, [location.pathname, navigate]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200">
       <Navigation />
       <main className="flex-1 flex flex-col">
         <Routes>
@@ -83,12 +87,17 @@ function AppContent() {
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID} locale="en">
-      <Router>
-        <AppContent />
-      </Router>
+      <ThemeProvider>
+        <LanguageProvider>
+          <Router>
+            <UnreadProvider>
+              <AppContent />
+            </UnreadProvider>
+          </Router>
+        </LanguageProvider>
+      </ThemeProvider>
     </GoogleOAuthProvider>
   );
 }
 
 export default App;
-

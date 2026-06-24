@@ -31,6 +31,7 @@ class Message(Base):
     conversation_id = Column(Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
     sender_id = Column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
+    image_url = Column(String, nullable=True)  # Optional: Cloudinary image URL
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
