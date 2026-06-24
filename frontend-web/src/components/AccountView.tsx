@@ -10,7 +10,6 @@ interface UserProfile {
   last_name: string;
   email: string;
   role: string;
-  available_credits: number;
   is_active: boolean;
   profile_picture_url?: string | null;
 }
@@ -292,13 +291,7 @@ export function AccountView() {
               {profile.is_active ? 'Active Workspace' : 'Inactive'}
             </span>
 
-            {/* Display Available Credits */}
-            <div className="mt-4 flex flex-col items-center">
-              <div className="text-[10px] uppercase tracking-wider text-slate-450 dark:text-slate-455 font-bold">Available Balance</div>
-              <div className="mt-1.5 inline-flex items-center px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-450 text-xs font-bold border border-teal-200 dark:border-teal-800/60 shadow-sm">
-                {profile.available_credits} analysis credits
-              </div>
-            </div>
+
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-200">

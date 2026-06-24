@@ -15,7 +15,6 @@ interface UserProfile {
   last_name: string;
   email: string;
   role: UserRole;
-  available_credits: number;
   is_active: boolean;
   profile_picture_url?: string | null;
   company_name?: string | null;
@@ -701,7 +700,6 @@ export function AdminDashboardView() {
                       {isSuperAdmin ? "Company" : "Title"}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Credits</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actions</th>
                   </tr>
                 </thead>
@@ -733,7 +731,6 @@ export function AdminDashboardView() {
                         )}
                       </td>
                       <td className="px-6 py-4"><StatusBadge active={u.is_active} /></td>
-                      <td className="px-6 py-4 text-slate-700 dark:text-slate-300 font-medium">{u.available_credits.toLocaleString()}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button

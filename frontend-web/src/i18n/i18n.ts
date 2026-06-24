@@ -182,7 +182,7 @@ const resources = {
         tableHeaderCompany: 'Company',
         tableHeaderTitle: 'Title',
         tableHeaderStatus: 'Status',
-        tableHeaderCredits: 'Credits',
+
         tableHeaderActions: 'Actions',
         edit: 'Edit',
         delete: 'Delete',
@@ -395,7 +395,7 @@ const resources = {
         tableHeaderCompany: 'الشركة',
         tableHeaderTitle: 'المسمى الوظيفي',
         tableHeaderStatus: 'الحالة',
-        tableHeaderCredits: 'الرصيد',
+
         tableHeaderActions: 'الإجراءات',
         edit: 'تعديل',
         delete: 'حذف',

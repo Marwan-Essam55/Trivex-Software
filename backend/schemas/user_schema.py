@@ -40,7 +40,6 @@ class UserProfileResponse(BaseModel):
     email: EmailStr
     profile_picture_url: Optional[str] = None
     role: UserRole
-    available_credits: int
     is_active: bool
     company_name: Optional[str] = None
     title: Optional[str] = None
@@ -63,7 +62,6 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
-    available_credits: Optional[int] = None
     company_name: Optional[str] = None
     title: Optional[str] = None
 
@@ -79,7 +77,7 @@ class UserUpdate(BaseModel):
 
 
 class UserOwnProfileUpdate(BaseModel):
-    """Schema for users updating their own profile — no role/credits/email changes."""
+    """Schema for users updating their own profile — no role/email changes."""
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
