@@ -24,7 +24,7 @@ export function LoginView() {
       formData.append('username', email.trim());
       formData.append('password', password);
 
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -67,7 +67,7 @@ export function LoginView() {
     setGoogleLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/auth/google`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: credentialResponse.credential }),

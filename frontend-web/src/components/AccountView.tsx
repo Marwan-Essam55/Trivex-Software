@@ -73,7 +73,7 @@ export function AccountView() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`${API_BASE}/auth/me`, { headers: authHeaders() });
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, { headers: authHeaders() });
         if (!res.ok) throw new Error('Failed to load profile');
         const data: UserProfile = await res.json();
         setProfile(data);
