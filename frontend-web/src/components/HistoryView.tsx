@@ -152,7 +152,7 @@ export function HistoryView() {
   ).length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 space-y-4 sm:space-y-0">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Analysis Archive</h1>
@@ -195,20 +195,22 @@ export function HistoryView() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-200">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 w-full transition-colors duration-200">
         {loading ? (
-          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-              <tr>
-                {['Preview','Asset Name','Date','Size','Duration','Status',''].map(h => (
-                  <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
-              {[...Array(3)].map((_, i) => <SkeletonRow key={i} />)}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto w-full block rounded-lg">
+            <table className="min-w-[900px] w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-900">
+                <tr>
+                  {['Preview','Asset Name','Date','Size','Duration','Status',''].map(h => (
+                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
+                {[...Array(3)].map((_, i) => <SkeletonRow key={i} />)}
+              </tbody>
+            </table>
+          </div>
         ) : filteredVideos.length === 0 ? (
           <div className="px-6 py-16 flex flex-col items-center text-center">
             <FileVideo className="w-8 h-8 text-slate-300 mb-3" />
@@ -222,8 +224,8 @@ export function HistoryView() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <div className="overflow-x-auto w-full block rounded-lg">
+            <table className="min-w-[900px] w-full divide-y divide-slate-200 dark:divide-slate-700">
               <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Preview</th>

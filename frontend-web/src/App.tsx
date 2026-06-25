@@ -53,7 +53,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200">
       <Navigation />
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col w-full overflow-x-hidden">
         <Routes>
           <Route path="/" element={<HomeView />} />
           <Route path="/login" element={<LoginView />} />
