@@ -1,9 +1,10 @@
 import threading
 import uuid
 
+import httpx
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Any, Dict, List
 
 from database.session import get_db, SessionLocal
 from core.security import get_current_user
@@ -274,3 +275,126 @@ def get_video(
         uploaded_at          = video.uploaded_at,
         analysis_results     = _build_analysis_results(video),
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/analyze-video  —  forward file to Ngrok AI model, persist result
+# ---------------------------------------------------------------------------
+
+# The AI model is hosted on a fixed Ngrok domain and never changes.
+_AI_MODEL_URL = "https://smooth-frog.ngrok-free.app/analyze"
+
+# How long (seconds) to wait for the AI model to respond.  Videos can be
+# large, so we give the remote model plenty of time to process them.
+_AI_TIMEOUT_SECONDS = 300.0
+
+
+@router.post("/analyze-video", status_code=status.HTTP_200_OK)
+async def analyze_video(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """
+    Accept a video file from the frontend, forward it to the external AI model
+    running on the fixed Ngrok domain, persist the returned analysis in the
+    `analysis_results` table, and echo the result back to the frontend.
+
+    Flow
+    ----
+    1. Validate content-type.
+    2. Read the file bytes once (avoids streaming issues with async).
+    3. POST the bytes as multipart/form-data to the Ngrok AI endpoint.
+    4. Parse the JSON response from the AI model.
+    5. Upsert an ``AnalysisResult`` row for the current user (no pre-existing
+       ``Video`` row is required — a placeholder Video record is created on
+       the fly when one is not provided).
+    6. Return the raw AI JSON to the frontend.
+    """
+    # ── 1. Validate file type ─────────────────────────────────────────────────
+    if not file.content_type or not (
+        file.content_type.startswith("video/") or file.content_type.startswith("audio/")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be a video (MP4, MOV, AVI) or audio (MP3, WAV).",
+        )
+
+    # ── 2. Buffer the upload so we can forward it ────────────────────────────
+    try:
+        file_bytes = await file.read()
+    except Exception as read_err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to read uploaded file: {read_err}",
+        )
+
+    # ── 3. Forward to the Ngrok AI model ─────────────────────────────────────
+    try:
+        async with httpx.AsyncClient(timeout=_AI_TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                _AI_MODEL_URL,
+                # The AI model expects the same field name as FastAPI: "file"
+                files={"file": (file.filename or "upload", file_bytes, file.content_type)},
+                # Ngrok free-tier requires this header to bypass the browser warning page
+                headers={"ngrok-skip-browser-warning": "true"},
+            )
+            response.raise_for_status()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="AI model did not respond within the timeout window. Try again later.",
+        )
+    except httpx.HTTPStatusError as http_err:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"AI model returned an error: {http_err.response.status_code} — {http_err.response.text[:300]}",
+        )
+    except httpx.RequestError as req_err:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Could not reach AI model: {req_err}",
+        )
+
+    # ── 4. Parse AI JSON response ─────────────────────────────────────────────
+    try:
+        ai_result: Dict[str, Any] = response.json()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI model returned a non-JSON response.",
+        )
+
+    # ── 5. Persist to the DB (upsert pattern) ────────────────────────────────
+    # Create a minimal Video placeholder so that the AnalysisResult FK is
+    # satisfied.  If the caller already has a video_id, they can use the
+    # existing GET /{video_id} endpoint instead.
+    try:
+        new_video = Video(
+            id               = uuid.uuid4(),
+            user_id          = current_user.id,
+            file_path        = f"direct-analyze::{file.filename or 'unknown'}",
+            original_filename = file.filename,
+            file_size_mb     = round(len(file_bytes) / (1024 * 1024), 4),
+            status           = VideoStatus.COMPLETED,
+        )
+        db.add(new_video)
+        db.flush()  # populate new_video.id without committing yet
+
+        analysis_row = AnalysisResult(
+            video_id         = new_video.id,
+            dominant_emotion = ai_result.get("dominant_emotion"),
+            confidence_score = ai_result.get("confidence_score") or ai_result.get("reliability_score"),
+            nlp_summary      = ai_result.get("nlp_summary"),
+            timeline_data    = ai_result,   # store the full AI payload
+        )
+        db.add(analysis_row)
+        db.commit()
+    except Exception as db_err:
+        db.rollback()
+        # Do NOT surface internal DB details; still return the AI result so the
+        # frontend is not blocked.  Log the error for ops visibility.
+        print(f"[analyze-video] ⚠️  DB persist failed (non-fatal): {db_err!r}")
+
+    # ── 6. Return AI result to the frontend ──────────────────────────────────
+    return ai_result
