@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator,
+  View, Text, TouchableOpacity, TextInput, ActivityIndicator,
   Alert, Modal, FlatList, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Users, UserPlus, Search, Shield, ShieldOff,
   Edit2, Trash2, X, CheckCircle2, XCircle, Eye, EyeOff,
-  AlertTriangle, Key, UserCheck, ChevronDown, ToggleLeft,
+  AlertTriangle, Key, UserCheck, ChevronDown, ToggleLeft, Activity, Filter
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { apiFetch } from '../../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -25,41 +26,44 @@ interface UserProfile {
   available_credits: number;
   is_active: boolean;
   profile_picture_url?: string | null;
+  company_name?: string | null;
+  title?: string | null;
 }
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 
 function StatCard({
-  label, value, icon: Icon, accentColor = '#475569', bgColor = '#f1f5f9', borderColor = '#e2e8f0',
+  label, value, icon: Icon, accent = false, danger = false, isDark = false,
 }: {
   label: string;
   value: number | string;
   icon: React.ElementType;
-  accentColor?: string;
-  bgColor?: string;
-  borderColor?: string;
+  accent?: boolean;
+  danger?: boolean;
+  isDark?: boolean;
 }) {
+  let iconBg = '#f1f5f9';
+  let iconBgBorder = '#e2e8f0';
+  let iconColor = '#475569';
+
+  if (danger) {
+    iconBg = '#fef2f2';
+    iconBgBorder = '#fecaca';
+    iconColor = '#dc2626';
+  } else if (accent) {
+    iconBg = '#f0fdf4';
+    iconBgBorder = '#bbf7d0';
+    iconColor = '#047857';
+  }
+
   return (
-    <View style={{
-      backgroundColor: '#ffffff',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: '#e2e8f0',
-      padding: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-      marginHorizontal: 4,
-    }}>
-      <View style={{
-        width: 40, height: 40, borderRadius: 8, backgroundColor: bgColor,
-        borderWidth: 1, borderColor, alignItems: 'center', justifyContent: 'center', marginRight: 12,
-      }}>
-        <Icon size={18} color={accentColor} />
+    <View style={{ backgroundColor: isDark ? '#0f172a' : '#ffffff', borderRadius: 14, borderWidth: 1, borderColor: isDark ? '#1e293b' : '#e2e8f0', padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 10, elevation: 1 }}>
+      <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: iconBg, borderWidth: 1, borderColor: iconBgBorder, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+        <Icon size={20} color={iconColor} />
       </View>
       <View>
-        <Text style={{ fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, color: '#94a3b8' }}>{label}</Text>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a', marginTop: 2 }}>{value}</Text>
+        <Text style={{ fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, color: isDark ? '#475569' : '#94a3b8', marginBottom: 4 }}>{label}</Text>
+        <Text style={{ fontSize: 26, fontWeight: '900', color: isDark ? '#f1f5f9' : '#0f172a' }}>{value}</Text>
       </View>
     </View>
   );
@@ -70,34 +74,22 @@ function StatCard({
 function RoleBadge({ role }: { role: UserRole }) {
   const isAdmin = role?.toUpperCase() === 'ADMIN';
   return (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3,
-      borderRadius: 6, borderWidth: 1,
-      backgroundColor: isAdmin ? '#f1f5f9' : '#ffffff',
-      borderColor: isAdmin ? '#cbd5e1' : '#e2e8f0',
-    }}>
+    <View className={`flex-row items-center px-2 py-1 rounded border ${isAdmin ? 'bg-slate-100 border-slate-300' : 'bg-white border-slate-200'}`}>
       {isAdmin ? <Shield size={11} color="#475569" /> : <UserCheck size={11} color="#94a3b8" />}
-      <Text style={{
-        fontSize: 11, fontWeight: isAdmin ? '700' : '500',
-        color: isAdmin ? '#475569' : '#94a3b8', marginLeft: 4,
-      }}>{isAdmin ? 'Admin' : 'User'}</Text>
+      <Text className={`text-[11px] font-bold ml-1 ${isAdmin ? 'text-slate-600' : 'text-slate-400'}`}>
+        {isAdmin ? 'Admin' : 'User'}
+      </Text>
     </View>
   );
 }
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3,
-      borderRadius: 6, borderWidth: 1,
-      backgroundColor: active ? '#ecfdf5' : '#fef2f2',
-      borderColor: active ? '#a7f3d0' : '#fecaca',
-    }}>
+    <View className={`flex-row items-center px-2 py-1 rounded border ${active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
       {active ? <CheckCircle2 size={11} color="#047857" /> : <XCircle size={11} color="#dc2626" />}
-      <Text style={{
-        fontSize: 11, fontWeight: '700',
-        color: active ? '#047857' : '#dc2626', marginLeft: 4,
-      }}>{active ? 'Active' : 'Inactive'}</Text>
+      <Text className={`text-[11px] font-bold ml-1 ${active ? 'text-emerald-700' : 'text-red-600'}`}>
+        {active ? 'Active' : 'Inactive'}
+      </Text>
     </View>
   );
 }
@@ -105,39 +97,56 @@ function StatusBadge({ active }: { active: boolean }) {
 // ─── Create User Modal ───────────────────────────────────────────────────────
 
 function CreateUserModal({
-  visible, onClose, onCreated,
+  visible, onClose, onCreated, isSuperAdmin
 }: {
   visible: boolean;
   onClose: () => void;
   onCreated: (user: UserProfile) => void;
+  isSuperAdmin: boolean;
+  onRequestDelete?: () => void;
 }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('USER');
+  const [companyName, setCompanyName] = useState('');
+  const [title, setTitle] = useState('');
+  const [role] = useState<UserRole>(isSuperAdmin ? 'ADMIN' : 'USER');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
-    setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setRole('USER');
+    setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setCompanyName(''); setTitle('');
     setShowPw(false); setError(null);
   };
 
   const handleSubmit = async () => {
     if (!firstName || !lastName || !email || !password) {
-      setError('All fields are required.');
+      setError('All basic fields are required.');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const created = await apiFetch('/admin/users', {
+      const payload: any = {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        password,
+        role: role.toUpperCase(),
+      };
+
+      if (isSuperAdmin && companyName.trim()) {
+        payload.company_name = companyName.trim();
+        payload.title = 'Admin';
+      } else if (!isSuperAdmin && title.trim()) {
+        payload.title = title.trim();
+      }
+
+      const created = await apiFetch('/admin/users/', {
         method: 'POST',
-        body: JSON.stringify({
-          first_name: firstName, last_name: lastName, email, password, role: role.toUpperCase(),
-        }),
+        body: JSON.stringify(payload),
       });
       onCreated(created);
       resetForm();
@@ -151,103 +160,91 @@ function CreateUserModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: '#e2e8f0' }}>
-          {/* Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <UserPlus size={16} color="#475569" />
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginLeft: 8 }}>Create New User</Text>
+      <View className="flex-1 bg-black/40 justify-center items-center p-4">
+        <View className="bg-white w-full max-w-sm rounded-2xl border border-slate-200 overflow-hidden shadow-xl">
+          <View className="flex-row items-center justify-between px-5 py-4 border-b border-slate-100">
+            <View className="flex-row items-center">
+              <UserPlus size={18} color="#0f172a" />
+              <Text className="text-base font-bold text-slate-900 ml-2">Create New User</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={{ padding: 4, borderRadius: 6 }}>
-              <X size={18} color="#94a3b8" />
+            <TouchableOpacity onPress={onClose} className="p-1 rounded-md bg-slate-50 border border-slate-100">
+              <X size={18} color="#64748b" />
             </TouchableOpacity>
           </View>
 
-          {/* Form */}
-          <View style={{ padding: 20 }}>
+          <View className="p-5">
             {error && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', marginBottom: 16 }}>
+              <View className="flex-row items-center p-3 rounded-lg bg-red-50 border border-red-200 mb-4">
                 <AlertTriangle size={14} color="#dc2626" />
-                <Text style={{ fontSize: 13, color: '#b91c1c', marginLeft: 8, flex: 1 }}>{error}</Text>
+                <Text className="text-xs text-red-700 ml-2 flex-1">{error}</Text>
               </View>
             )}
 
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>First Name</Text>
+            {isSuperAdmin && (
+              <View className="mb-4">
+                <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Company Name</Text>
                 <TextInput
-                  style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a' }}
+                  className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                  value={companyName} onChangeText={setCompanyName} placeholder="e.g. Acme Ltd"
+                />
+              </View>
+            )}
+
+            <View className="flex-row gap-3 mb-4">
+              <View className="flex-1">
+                <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">First Name</Text>
+                <TextInput
+                  className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900"
                   value={firstName} onChangeText={setFirstName} placeholder="John"
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Last Name</Text>
+              <View className="flex-1">
+                <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Last Name</Text>
                 <TextInput
-                  style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a' }}
+                  className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900"
                   value={lastName} onChangeText={setLastName} placeholder="Doe"
                 />
               </View>
             </View>
 
-            <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Email</Text>
+            {!isSuperAdmin && (
+              <View className="mb-4">
+                <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Title</Text>
+                <TextInput
+                  className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900"
+                  value={title} onChangeText={setTitle} placeholder="e.g. Sales Manager"
+                />
+              </View>
+            )}
+
+            <View className="mb-4">
+              <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email</Text>
               <TextInput
-                style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a' }}
+                className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900"
                 value={email} onChangeText={setEmail} placeholder="john@example.com" keyboardType="email-address" autoCapitalize="none"
               />
             </View>
 
-            <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Password</Text>
-              <View style={{ position: 'relative' }}>
+            <View className="mb-5">
+              <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Password</Text>
+              <View className="relative">
                 <TextInput
-                  style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, paddingRight: 44, fontSize: 14, color: '#0f172a' }}
+                  className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 pr-10 text-sm text-slate-900 focus:border-slate-900"
                   value={password} onChangeText={setPassword} secureTextEntry={!showPw} placeholder="Min. 8 characters"
                 />
-                <TouchableOpacity onPress={() => setShowPw(v => !v)} style={{ position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' }}>
-                  {showPw ? <EyeOff size={18} color="#94a3b8" /> : <Eye size={18} color="#94a3b8" />}
+                <TouchableOpacity onPress={() => setShowPw(v => !v)} className="absolute right-3 top-0 bottom-0 justify-center">
+                  {showPw ? <EyeOff size={16} color="#94a3b8" /> : <Eye size={16} color="#94a3b8" />}
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Role</Text>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity
-                  onPress={() => setRole('USER')}
-                  style={{
-                    flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, alignItems: 'center',
-                    backgroundColor: role === 'USER' ? '#0f172a' : '#f8fafc',
-                    borderColor: role === 'USER' ? '#0f172a' : '#cbd5e1',
-                  }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: role === 'USER' ? '#fff' : '#64748b' }}>User</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setRole('ADMIN')}
-                  style={{
-                    flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, alignItems: 'center',
-                    backgroundColor: role === 'ADMIN' ? '#0f172a' : '#f8fafc',
-                    borderColor: role === 'ADMIN' ? '#0f172a' : '#cbd5e1',
-                  }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: role === 'ADMIN' ? '#fff' : '#64748b' }}>Admin</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity onPress={onClose} style={{
-                flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#cbd5e1', alignItems: 'center',
-              }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569' }}>Cancel</Text>
+            <View className="flex-row gap-3">
+              <TouchableOpacity onPress={onClose} className="flex-1 py-3 rounded-lg border border-slate-300 items-center justify-center">
+                <Text className="text-sm font-semibold text-slate-600">Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSubmit} disabled={loading} style={{
-                flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#0f172a', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', opacity: loading ? 0.6 : 1,
-              }}>
-                {loading ? <ActivityIndicator size="small" color="#fff" /> : <UserPlus size={14} color="#fff" />}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff', marginLeft: 6 }}>Create User</Text>
+              <TouchableOpacity onPress={handleSubmit} disabled={loading} className={`flex-1 py-3 rounded-lg bg-slate-900 flex-row items-center justify-center gap-2 ${loading ? 'opacity-60' : ''}`}>
+                {loading ? <ActivityIndicator size="small" color="#fff" /> : <UserPlus size={16} color="#fff" />}
+                <Text className="text-sm font-bold text-white">Create</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -260,16 +257,20 @@ function CreateUserModal({
 // ─── Edit User Modal ─────────────────────────────────────────────────────────
 
 function EditUserModal({
-  user, visible, onClose, onUpdated,
+  user, visible, onClose, onUpdated, isSuperAdmin, onRequestDelete
 }: {
   user: UserProfile;
   visible: boolean;
   onClose: () => void;
   onUpdated: (u: UserProfile) => void;
+  isSuperAdmin: boolean;
+  onRequestDelete?: () => void;
 }) {
   const [firstName, setFirstName] = useState(user.first_name);
-  const [lastName, setLastName] = useState(user.last_name);
+  const [lastName, setLastName] = useState(user.last_name || '');
   const [email, setEmail] = useState(user.email);
+  const [companyName, setCompanyName] = useState(user.company_name || '');
+  const [title, setTitle] = useState(user.title || '');
   const [role, setRole] = useState<UserRole>(user.role?.toUpperCase() as UserRole || 'USER');
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoMsg, setInfoMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -288,9 +289,13 @@ function EditUserModal({
     setInfoLoading(true);
     setInfoMsg(null);
     try {
+      const payload: any = { first_name: firstName, last_name: lastName, email, role: role.toUpperCase() };
+      if (isSuperAdmin) payload.company_name = companyName;
+      if (!isSuperAdmin) payload.title = title;
+
       const updated = await apiFetch(`/admin/users/${user.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, email, role: role.toUpperCase() }),
+        body: JSON.stringify(payload),
       });
       onUpdated(updated);
       setInfoMsg({ type: 'ok', text: 'Profile updated successfully.' });
@@ -302,215 +307,192 @@ function EditUserModal({
   };
 
   const handlePasswordReset = async () => {
-    if (newPassword !== confirmPassword) {
-      setPwMsg({ type: 'err', text: 'Passwords do not match.' });
+    if (!newPassword || newPassword !== confirmPassword) {
+      setPwMsg({ type: 'err', text: 'Passwords do not match or are empty.' });
       return;
     }
-    if (newPassword.length < 8) {
-      setPwMsg({ type: 'err', text: 'Password must be at least 8 characters.' });
-      return;
-    }
-    setPwLoading(true);
-    setPwMsg(null);
+    setPwLoading(true); setPwMsg(null);
     try {
       await apiFetch(`/admin/users/${user.id}/reset-password`, {
         method: 'POST',
         body: JSON.stringify({ new_password: newPassword }),
       });
       setPwMsg({ type: 'ok', text: 'Password reset successfully.' });
-      setNewPassword('');
-      setConfirmPassword('');
+      setNewPassword(''); setConfirmPassword('');
     } catch (err: any) {
       setPwMsg({ type: 'err', text: err.message });
-    } finally {
-      setPwLoading(false);
-    }
+    } finally { setPwLoading(false); }
   };
 
   const handleToggleStatus = async () => {
-    setStatusLoading(true);
-    setStatusMsg(null);
+    setStatusLoading(true); setStatusMsg(null);
     try {
       const updated = await apiFetch(`/admin/users/${user.id}/toggle-status`, { method: 'POST' });
       setIsActive(updated.is_active);
       onUpdated(updated);
-      setStatusMsg({ type: 'ok', text: `User is now ${updated.is_active ? 'active' : 'inactive'}.` });
+      setStatusMsg({ type: 'ok', text: `User is now ${updated.is_active ? 'Active' : 'Inactive'}.` });
     } catch (err: any) {
       setStatusMsg({ type: 'err', text: err.message });
-    } finally {
-      setStatusLoading(false);
-    }
+    } finally { setStatusLoading(false); }
   };
 
-  const MsgDisplay = ({ m }: { m: { type: 'ok' | 'err'; text: string } | null }) =>
-    m ? (
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-        {m.type === 'ok' ? <CheckCircle2 size={13} color="#047857" /> : <AlertTriangle size={13} color="#dc2626" />}
-        <Text style={{ fontSize: 12, color: m.type === 'ok' ? '#047857' : '#dc2626', marginLeft: 6, flex: 1 }}>{m.text}</Text>
-      </View>
-    ) : null;
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, maxHeight: '90%', borderWidth: 1, borderColor: '#e2e8f0' }}>
-          {/* Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View className="flex-1 bg-black/40 justify-end">
+        <View className="bg-slate-50 w-full rounded-t-3xl max-h-[90%] border-t border-slate-200 overflow-hidden shadow-2xl">
+          <View className="flex-row items-center justify-between px-6 py-5 bg-white border-b border-slate-100">
             <View>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a' }}>Edit User</Text>
-              <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{user.first_name} {user.last_name} · {user.email}</Text>
+              <Text className="text-lg font-bold text-slate-900">Edit User</Text>
+              <Text className="text-xs text-slate-500 mt-1">{user.first_name} {user.last_name} • {user.email}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
-              <X size={18} color="#94a3b8" />
+            <TouchableOpacity onPress={onClose} className="p-2 rounded-full bg-slate-100">
+              <X size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ padding: 20 }} contentContainerStyle={{ paddingBottom: 20 }}>
-            {/* ── Section 1: Basic Info ── */}
-            <View style={{ borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, marginBottom: 16, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#f8fafc', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
-                <Edit2 size={13} color="#475569" />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginLeft: 8 }}>Basic Information</Text>
-              </View>
-              <View style={{ padding: 14 }}>
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>First Name</Text>
-                    <TextInput
-                      style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a' }}
-                      value={firstName} onChangeText={setFirstName}
-                    />
+          <FlatList
+            data={[{ key: 'content' }]}
+            renderItem={() => (
+              <View className="p-5 gap-5">
+                {/* Basic Info */}
+                <View className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                  <View className="flex-row items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
+                    <Edit2 size={14} color="#64748b" />
+                    <Text className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Basic Information</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>Last Name</Text>
-                    <TextInput
-                      style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a' }}
-                      value={lastName} onChangeText={setLastName}
-                    />
-                  </View>
-                </View>
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>Email</Text>
-                  <TextInput
-                    style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a' }}
-                    value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none"
-                  />
-                </View>
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>Role</Text>
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <TouchableOpacity
-                      onPress={() => setRole('USER')}
-                      style={{
-                        flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, alignItems: 'center',
-                        backgroundColor: role === 'USER' ? '#0f172a' : '#f8fafc', borderColor: role === 'USER' ? '#0f172a' : '#cbd5e1',
-                      }}
-                    >
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: role === 'USER' ? '#fff' : '#64748b' }}>User</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setRole('ADMIN')}
-                      style={{
-                        flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, alignItems: 'center',
-                        backgroundColor: role === 'ADMIN' ? '#0f172a' : '#f8fafc', borderColor: role === 'ADMIN' ? '#0f172a' : '#cbd5e1',
-                      }}
-                    >
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: role === 'ADMIN' ? '#fff' : '#64748b' }}>Admin</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <MsgDisplay m={infoMsg} />
-                <TouchableOpacity onPress={handleInfoSave} disabled={infoLoading} style={{
-                  marginTop: 12, paddingVertical: 10, borderRadius: 8, backgroundColor: '#0f172a', alignItems: 'center',
-                  flexDirection: 'row', justifyContent: 'center', opacity: infoLoading ? 0.6 : 1,
-                }}>
-                  {infoLoading && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />}
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Save Changes</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                  <View className="p-4 gap-4">
+                    {isSuperAdmin && (
+                      <View>
+                        <Text className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Company</Text>
+                        <TextInput className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900" value={companyName} onChangeText={setCompanyName} />
+                      </View>
+                    )}
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <Text className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">First Name</Text>
+                        <TextInput className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900" value={firstName} onChangeText={setFirstName} />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Last Name</Text>
+                        <TextInput className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900" value={lastName} onChangeText={setLastName} />
+                      </View>
+                    </View>
+                    {!isSuperAdmin && (
+                      <View>
+                        <Text className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Title</Text>
+                        <TextInput className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900" value={title} onChangeText={setTitle} />
+                      </View>
+                    )}
+                    <View>
+                      <Text className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Email</Text>
+                      <TextInput className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900" value={email} onChangeText={setEmail} keyboardType="email-address" />
+                    </View>
 
-            {/* ── Section 2: Reset Password ── */}
-            <View style={{ borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, marginBottom: 16, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#f8fafc', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
-                <Key size={13} color="#475569" />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginLeft: 8 }}>Reset Password</Text>
-              </View>
-              <View style={{ padding: 14 }}>
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>New Password</Text>
-                  <View style={{ position: 'relative' }}>
-                    <TextInput
-                      style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, paddingRight: 44, fontSize: 14, color: '#0f172a' }}
-                      value={newPassword} onChangeText={setNewPassword} secureTextEntry={!showPw} placeholder="Min. 8 characters"
-                    />
-                    <TouchableOpacity onPress={() => setShowPw(v => !v)} style={{ position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' }}>
-                      {showPw ? <EyeOff size={18} color="#94a3b8" /> : <Eye size={18} color="#94a3b8" />}
+                    <View className="flex-row items-center justify-between mt-2">
+                      {infoMsg && (
+                        <Text className={`text-xs ${infoMsg.type === 'ok' ? 'text-emerald-600' : 'text-red-600'}`}>{infoMsg.text}</Text>
+                      )}
+                      <TouchableOpacity onPress={handleInfoSave} disabled={infoLoading} className="ml-auto px-4 py-2 bg-slate-900 rounded-lg flex-row items-center gap-2">
+                        {infoLoading && <ActivityIndicator size="small" color="#fff" />}
+                        <Text className="text-xs font-bold text-white">Save Changes</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Reset Password */}
+                <View className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                  <View className="flex-row items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
+                    <Key size={14} color="#64748b" />
+                    <Text className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Reset Password</Text>
+                  </View>
+                  <View className="p-4 gap-4">
+                    <View>
+                      <Text className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">New Password</Text>
+                      <View className="relative">
+                        <TextInput className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 pr-10 text-sm text-slate-900" value={newPassword} onChangeText={setNewPassword} secureTextEntry={!showPw} />
+                        <TouchableOpacity onPress={() => setShowPw(v => !v)} className="absolute right-3 top-0 bottom-0 justify-center">
+                          {showPw ? <EyeOff size={16} color="#94a3b8" /> : <Eye size={16} color="#94a3b8" />}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <View>
+                      <Text className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Confirm Password</Text>
+                      <TextInput className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPw} />
+                    </View>
+                    <View className="flex-row items-center justify-between mt-2">
+                      {pwMsg && (
+                        <Text className={`text-xs flex-1 mr-2 ${pwMsg.type === 'ok' ? 'text-emerald-600' : 'text-red-600'}`}>{pwMsg.text}</Text>
+                      )}
+                      <TouchableOpacity onPress={handlePasswordReset} disabled={pwLoading} className="ml-auto px-4 py-2 bg-slate-900 rounded-lg flex-row items-center gap-2">
+                        {pwLoading && <ActivityIndicator size="small" color="#fff" />}
+                        <Text className="text-xs font-bold text-white">Reset</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Account Status */}
+                <View className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                  <View className="flex-row items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
+                    <ToggleLeft size={14} color="#64748b" />
+                    <Text className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Account Status</Text>
+                  </View>
+                  <View className="p-4 flex-row items-center justify-between">
+                    <View>
+                      <Text className="text-xs font-bold text-slate-900 mb-2">Current Status</Text>
+                      <StatusBadge active={isActive} />
+                      {statusMsg && <Text className={`text-[10px] mt-2 ${statusMsg.type === 'ok' ? 'text-emerald-600' : 'text-red-600'}`}>{statusMsg.text}</Text>}
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={handleToggleStatus} disabled={statusLoading}
+                      className={`px-4 py-2 rounded-lg border flex-row items-center gap-2 ${isActive ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}
+                    >
+                      {statusLoading && <ActivityIndicator size="small" color={isActive ? '#dc2626' : '#047857'} />}
+                      {!statusLoading && (isActive ? <ShieldOff size={14} color="#dc2626" /> : <Shield size={14} color="#047857" />)}
+                      <Text className={`text-xs font-bold ${isActive ? 'text-red-700' : 'text-emerald-700'}`}>{isActive ? 'Deactivate' : 'Activate'}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>Confirm Password</Text>
-                  <TextInput
-                    style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a' }}
-                    value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPw}
-                  />
-                </View>
-                <MsgDisplay m={pwMsg} />
-                <TouchableOpacity onPress={handlePasswordReset} disabled={pwLoading} style={{
-                  marginTop: 12, paddingVertical: 10, borderRadius: 8, backgroundColor: '#0f172a', alignItems: 'center',
-                  flexDirection: 'row', justifyContent: 'center', opacity: pwLoading ? 0.6 : 1,
-                }}>
-                  {pwLoading ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} /> : <Key size={14} color="#fff" style={{ marginRight: 6 }} />}
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Reset Password</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* ── Section 3: Account Status ── */}
-            <View style={{ borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#f8fafc', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
-                <ToggleLeft size={13} color="#475569" />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginLeft: 8 }}>Account Status</Text>
-              </View>
-              <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#0f172a' }}>Current Status</Text>
-                  <View style={{ marginTop: 6 }}>
-                    <StatusBadge active={isActive} />
+                {/* Account Actions */}
+                {user.email !== 'admin@admin.com' && (
+                  <View className="bg-white border border-red-200 rounded-xl overflow-hidden shadow-sm mb-4">
+                    <View className="flex-row items-center gap-2 px-4 py-3 bg-red-50 border-b border-red-200">
+                      <Trash2 size={14} color="#dc2626" />
+                      <Text className="text-[11px] font-bold uppercase tracking-widest text-red-700">Danger Zone</Text>
+                    </View>
+                    <View className="p-4 flex-row items-center justify-between">
+                      <View className="flex-1 mr-4">
+                        <Text className="text-xs font-bold text-slate-900 mb-1">Delete User</Text>
+                        <Text className="text-[10px] text-slate-500">Permanently delete this user. This action cannot be undone.</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          onClose();
+                          if (onRequestDelete) onRequestDelete();
+                        }}
+                        className="px-4 py-2 rounded-lg bg-red-600 flex-row items-center gap-2"
+                      >
+                        <Text className="text-xs font-bold text-white">Delete</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <MsgDisplay m={statusMsg} />
-                </View>
-                <TouchableOpacity onPress={handleToggleStatus} disabled={statusLoading} style={{
-                  flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1,
-                  backgroundColor: isActive ? '#fef2f2' : '#ecfdf5',
-                  borderColor: isActive ? '#fecaca' : '#a7f3d0',
-                  opacity: statusLoading ? 0.6 : 1,
-                }}>
-                  {statusLoading ? (
-                    <ActivityIndicator size="small" color={isActive ? '#dc2626' : '#047857'} />
-                  ) : isActive ? (
-                    <ShieldOff size={16} color="#dc2626" />
-                  ) : (
-                    <Shield size={16} color="#047857" />
-                  )}
-                  <Text style={{
-                    fontSize: 13, fontWeight: '600', marginLeft: 6,
-                    color: isActive ? '#b91c1c' : '#047857',
-                  }}>{isActive ? 'Deactivate' : 'Activate'}</Text>
-                </TouchableOpacity>
+                )}
+
               </View>
-            </View>
-          </ScrollView>
+            )}
+          />
         </View>
       </View>
     </Modal>
   );
 }
 
-// ─── Delete Confirm Dialog ───────────────────────────────────────────────────
+// ─── Delete Confirm Modal ────────────────────────────────────────────────────
 
-function DeleteConfirmDialog({
+function DeleteConfirmModal({
   user, visible, onClose, onDeleted,
 }: {
   user: UserProfile;
@@ -523,11 +505,9 @@ function DeleteConfirmDialog({
 
   const handleDelete = async () => {
     setLoading(true);
-    setError(null);
     try {
-      await apiFetch(`/admin/users/${user.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/admin/users/${user.id}`, { method: 'DELETE' });
       onDeleted(user.id);
-      onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to delete user.');
     } finally {
@@ -537,37 +517,25 @@ function DeleteConfirmDialog({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 340, padding: 24, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' }}>
-          <View style={{
-            width: 48, height: 48, borderRadius: 24, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca',
-            alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-          }}>
-            <Trash2 size={20} color="#dc2626" />
+      <View className="flex-1 bg-black/40 justify-center items-center p-4">
+        <View className="bg-white w-full max-w-sm rounded-2xl p-6 items-center shadow-xl">
+          <View className="w-14 h-14 rounded-full bg-red-50 border border-red-100 items-center justify-center mb-4">
+            <Trash2 size={24} color="#dc2626" />
           </View>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', textAlign: 'center' }}>Delete User</Text>
-          <Text style={{ fontSize: 14, color: '#64748b', textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
-            Are you sure you want to permanently delete{' '}
-            <Text style={{ fontWeight: '700', color: '#334155' }}>{user.first_name} {user.last_name}</Text>?
-            This action cannot be undone.
+          <Text className="text-base font-bold text-slate-900 text-center mb-2">Delete User</Text>
+          <Text className="text-sm text-slate-500 text-center leading-5 mb-6">
+            Are you sure you want to permanently delete {user.first_name} {user.last_name}? This action cannot be undone.
           </Text>
-          {error && (
-            <View style={{ marginTop: 12, padding: 10, borderRadius: 8, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', width: '100%' }}>
-              <Text style={{ fontSize: 12, color: '#b91c1c', textAlign: 'center' }}>{error}</Text>
-            </View>
-          )}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
-            <TouchableOpacity onPress={onClose} style={{
-              flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#cbd5e1', alignItems: 'center',
-            }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569' }}>Cancel</Text>
+
+          {error && <Text className="text-xs text-red-600 mb-4">{error}</Text>}
+
+          <View className="flex-row gap-3 w-full">
+            <TouchableOpacity onPress={onClose} className="flex-1 py-3 rounded-xl border border-slate-300 items-center">
+              <Text className="text-sm font-semibold text-slate-700">Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} disabled={loading} style={{
-              flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#dc2626', alignItems: 'center',
-              flexDirection: 'row', justifyContent: 'center', opacity: loading ? 0.6 : 1,
-            }}>
-              {loading ? <ActivityIndicator size="small" color="#fff" /> : <Trash2 size={14} color="#fff" />}
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff', marginLeft: 6 }}>Delete</Text>
+            <TouchableOpacity onPress={handleDelete} disabled={loading} className={`flex-1 py-3 rounded-xl bg-red-600 items-center flex-row justify-center gap-2 ${loading ? 'opacity-60' : ''}`}>
+              {loading && <ActivityIndicator size="small" color="#fff" />}
+              <Text className="text-sm font-bold text-white">Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -576,108 +544,64 @@ function DeleteConfirmDialog({
   );
 }
 
-// ─── User Row ────────────────────────────────────────────────────────────────
-
-function UserRow({
-  user, onEdit, onDelete,
-}: {
-  user: UserProfile;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const initials = `${(user.first_name || '')[0] || ''}${(user.last_name || '')[0] || ''}`.toUpperCase();
-
-  return (
-    <View style={{
-      paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
-      backgroundColor: '#fff',
-    }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {/* Avatar */}
-        <View style={{
-          width: 38, height: 38, borderRadius: 19, backgroundColor: '#e2e8f0', borderWidth: 1, borderColor: '#cbd5e1',
-          alignItems: 'center', justifyContent: 'center', marginRight: 12,
-        }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>{initials}</Text>
-        </View>
-
-        {/* Info */}
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#0f172a' }}>{user.first_name} {user.last_name}</Text>
-          <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{user.email}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-            <RoleBadge role={user.role} />
-            <StatusBadge active={user.is_active} />
-            <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>
-              {user.available_credits?.toLocaleString() ?? 0} credits
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, paddingLeft: 50 }}>
-        <TouchableOpacity onPress={onEdit} style={{
-          flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7,
-          borderRadius: 6, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#fff',
-        }}>
-          <Edit2 size={13} color="#475569" />
-          <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569', marginLeft: 5 }}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onDelete} style={{
-          flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7,
-          borderRadius: 6, borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fff',
-        }}>
-          <Trash2 size={13} color="#dc2626" />
-          <Text style={{ fontSize: 12, fontWeight: '600', color: '#dc2626', marginLeft: 5 }}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
 // ─── Main Admin Dashboard ────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
-  const { signOut } = useAuth();
+  const { user: currentUser } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  // ── Theme tokens ──
+  const bg = isDark ? '#020617' : '#ffffff';
+  const cardBg = isDark ? '#0f172a' : '#ffffff';
+  const cardBorder = isDark ? '#1e293b' : '#e2e8f0';
+  const valueClr = isDark ? '#f1f5f9' : '#0f172a';
+  const subClr = isDark ? '#64748b' : '#64748b';
+  const labelClr = isDark ? '#475569' : '#94a3b8';
+  const inputBg = isDark ? '#0f172a' : '#ffffff';
+  const sectionBg = isDark ? '#1e293b' : '#f8fafc';
+  const divider = isDark ? '#1e293b' : '#e2e8f0';
+
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterMenuVisible, setFilterMenuVisible] = useState(false);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserProfile | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserProfile | null>(null);
 
-  const fetchUsers = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    setFetchError(null);
+  const isSuperAdmin = currentUser ? (currentUser.email === 'admin@admin.com' || !currentUser.company_name) : true;
+
+  const fetchUsers = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
-      const data = await apiFetch('/admin/users');
+      const data = await apiFetch('/admin/users/');
       setUsers(data);
     } catch (err: any) {
-      if (err.message?.includes('401') || err.message?.includes('403')) {
-        signOut();
-        return;
-      }
-      setFetchError(err.message || 'Failed to fetch users.');
+      Alert.alert('Error', err.message || 'Failed to fetch users');
     } finally {
-      if (isRefresh) setRefreshing(false); else setLoading(false);
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [signOut]);
+  }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
-  const totalUsers = users.length;
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchUsers(true);
+  };
+
   const activeUsers = users.filter(u => u.is_active).length;
-  const inactiveUsers = totalUsers - activeUsers;
-
+  const inactiveUsers = users.length - activeUsers;
   const filtered = users.filter(u => {
     const q = searchQuery.toLowerCase();
-    const matchesQ = !q || `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(q);
+    const matchesQ = !q || `${u.first_name} ${u.last_name} ${u.email} ${u.company_name || ''}`.toLowerCase().includes(q);
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && u.is_active) ||
@@ -685,152 +609,211 @@ export default function AdminDashboard() {
     return matchesQ && matchesStatus;
   });
 
-  const handleCreated = (u: UserProfile) => {
-    setUsers(prev => [u, ...prev]);
+  const showFilterMenu = () => {
+    setFilterMenuVisible(true);
   };
 
-  const handleUpdated = (u: UserProfile) => {
-    setUsers(prev => prev.map(x => x.id === u.id ? u : x));
+  const getFilterText = () => {
+    if (statusFilter === 'active') return 'Active';
+    if (statusFilter === 'inactive') return 'Inactive';
+    return 'All Status';
   };
-
-  const handleDeleted = (id: string) => {
-    setUsers(prev => prev.filter(x => x.id !== id));
-  };
-
-  const toggleStatusFilter = () => {
-    const order: ('all' | 'active' | 'inactive')[] = ['all', 'active', 'inactive'];
-    const idx = order.indexOf(statusFilter);
-    setStatusFilter(order[(idx + 1) % order.length]);
-  };
-
-  const statusFilterLabel = statusFilter === 'all' ? 'All Status' : statusFilter === 'active' ? 'Active' : 'Inactive';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }} edges={['top']}>
-      {/* Header */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a', letterSpacing: -0.3 }}>User Management</Text>
-            <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>Manage platform users, roles, and access.</Text>
-          </View>
-          <TouchableOpacity onPress={() => setIsCreateOpen(true)} style={{
-            flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10,
-            backgroundColor: '#0f172a', borderRadius: 10,
-          }}>
-            <UserPlus size={14} color="#fff" />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff', marginLeft: 6 }}>New</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+    <View style={{ flex: 1, backgroundColor: bg }}>
+      <FlatList
+        data={filtered}
+        keyExtractor={item => item.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0d9488" />}
+        contentContainerStyle={{ paddingBottom: 40, backgroundColor: bg }}
+        style={{ backgroundColor: bg }}
+        ListHeaderComponent={
+          <>
+            <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, backgroundColor: bg }}>
+              <Text style={{ fontSize: 28, fontWeight: '900', color: valueClr, marginBottom: 4, letterSpacing: -0.5 }}>User Management</Text>
+              <Text style={{ fontSize: 14, color: subClr, marginBottom: 24 }}>Manage platform users, roles, and access control.</Text>
 
-      {/* Stats */}
-      <View style={{ flexDirection: 'row', paddingHorizontal: 12, marginBottom: 16 }}>
-        <StatCard label="Total" value={loading ? '—' : totalUsers} icon={Users} />
-        <StatCard label="Active" value={loading ? '—' : activeUsers} icon={CheckCircle2} accentColor="#047857" bgColor="#ecfdf5" borderColor="#a7f3d0" />
-        <StatCard label="Inactive" value={loading ? '—' : inactiveUsers} icon={XCircle} accentColor="#dc2626" bgColor="#fef2f2" borderColor="#fecaca" />
-      </View>
+              <TouchableOpacity onPress={() => setIsCreateOpen(true)} style={{ width: '100%', paddingVertical: 14, borderRadius: 12, backgroundColor: '#0d9488', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <UserPlus size={18} color="#fff" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff', marginLeft: 8 }}>New User</Text>
+              </TouchableOpacity>
 
-      {/* Search & Filter Bar */}
-      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <View style={{ flex: 1, position: 'relative' }}>
-            <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search by name or email…"
-              placeholderTextColor="#94a3b8"
-              style={{
-                backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10,
-                paddingLeft: 38, paddingRight: 14, paddingVertical: 10, fontSize: 14, color: '#0f172a',
-              }}
-            />
-          </View>
-          <TouchableOpacity onPress={toggleStatusFilter} style={{
-            flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10,
-            backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10,
-          }}>
-            <Text style={{ fontSize: 13, fontWeight: '500', color: '#475569' }}>{statusFilterLabel}</Text>
-            <ChevronDown size={14} color="#94a3b8" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* User List */}
-      <View style={{ flex: 1, backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', overflow: 'hidden' }}>
-        {fetchError ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <AlertTriangle size={20} color="#dc2626" />
+              <View>
+                <StatCard label="TOTAL USERS" value={users.length} icon={Users} isDark={isDark} />
+                <StatCard label="ACTIVE" value={activeUsers} icon={CheckCircle2} accent isDark={isDark} />
+                <StatCard label="INACTIVE" value={inactiveUsers} icon={XCircle} danger isDark={isDark} />
+              </View>
             </View>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#334155' }}>Failed to load users</Text>
-            <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{fetchError}</Text>
-            <TouchableOpacity onPress={() => fetchUsers()} style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#0f172a', borderRadius: 8 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Retry</Text>
+
+            <View style={{ paddingHorizontal: 16, paddingBottom: 0 }}>
+              <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 14, borderTopRightRadius: 14, borderWidth: 1, borderBottomWidth: 0, borderColor: cardBorder, overflow: 'hidden' }}>
+                <View style={{ paddingHorizontal: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: cardBorder }}>
+                  <View className="flex-row items-center mb-3">
+                    <View className="flex-1 relative justify-center">
+                      <View className="absolute left-3 z-10">
+                        <Search size={16} color="#94a3b8" />
+                      </View>
+                      <TextInput
+                        className="pl-9 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white"
+                        placeholder="Search by name or email..."
+                        placeholderTextColor={subClr}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                      />
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={showFilterMenu} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: cardBorder, flexDirection: 'row', alignItems: 'center', backgroundColor: sectionBg }}>
+                    <Filter size={15} color={subClr} />
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: valueClr, marginLeft: 6, marginRight: 12 }}>{getFilterText()}</Text>
+                    <ChevronDown size={15} color={subClr} />
+                  </TouchableOpacity>
+                </View>
+
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: sectionBg, borderBottomWidth: 1, borderBottomColor: cardBorder }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: labelClr, textTransform: 'uppercase', letterSpacing: 1.5 }}>USER</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: labelClr, textTransform: 'uppercase', letterSpacing: 1.5 }}>COMPANY</Text>
+                </View>
+              </View>
+            </View>
+          </>
+        }
+        ListEmptyComponent={() => (
+          <View style={{ paddingHorizontal: 20 }}>
+            <View style={{ backgroundColor: cardBg, borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderColor: cardBorder, padding: 40, alignItems: 'center', justifyContent: 'center' }}>
+              {loading
+                ? <ActivityIndicator size="large" color="#0d9488" />
+                : (
+                  <>
+                    <Users size={32} color={isDark ? '#334155' : '#cbd5e1'} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: subClr, marginTop: 16 }}>No users found</Text>
+                  </>
+                )}
+            </View>
+          </View>
+        )}
+        renderItem={({ item }) => (
+          <View style={{ paddingHorizontal: 20 }}>
+            <TouchableOpacity
+              onPress={() => setEditUser(item)}
+              style={{ backgroundColor: cardBg, borderBottomWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: divider, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              activeOpacity={0.7}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderWidth: 1, borderColor: cardBorder, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: valueClr, textTransform: 'uppercase' }}>
+                    {item.role === 'ADMIN' && item.company_name ? item.company_name[0] : `${item.first_name[0]}${item.last_name ? item.last_name[0] : ''}`}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, paddingRight: 16 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: valueClr, lineHeight: 20 }}>
+                    {item.role === 'ADMIN' && item.company_name ? item.company_name : `${item.first_name} ${item.last_name}`}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: subClr, marginTop: 2 }}>{item.email}</Text>
+                </View>
+              </View>
+              <View style={{ marginLeft: 8 }}>
+                {isSuperAdmin ? (
+                  item.company_name && item.company_name.toLowerCase() !== 'n/a' ? (
+                    <View style={{ backgroundColor: isDark ? '#172554' : '#eff6ff', borderWidth: 1, borderColor: isDark ? '#1e3a8a' : '#bfdbfe', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#60a5fa' : '#1d4ed8' }}>{item.company_name}</Text>
+                    </View>
+                  ) : (
+                    <View style={{ backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderWidth: 1, borderColor: cardBorder, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: subClr }}>N/A</Text>
+                    </View>
+                  )
+                ) : (
+                  item.title && item.title.toLowerCase() !== 'n/a' ? (
+                    <View style={{ backgroundColor: isDark ? '#172554' : '#eff6ff', borderWidth: 1, borderColor: isDark ? '#1e3a8a' : '#bfdbfe', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#60a5fa' : '#1d4ed8' }}>{item.title}</Text>
+                    </View>
+                  ) : (
+                    <View style={{ backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderWidth: 1, borderColor: cardBorder, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: subClr }}>N/A</Text>
+                    </View>
+                  )
+                )}
+              </View>
             </TouchableOpacity>
           </View>
-        ) : loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-            <ActivityIndicator size="large" color="#64748b" />
-            <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 12 }}>Loading users…</Text>
-          </View>
-        ) : filtered.length === 0 ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-            <Users size={32} color="#cbd5e1" />
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569', marginTop: 12 }}>No users found</Text>
-            <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Try adjusting your search or filters.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <UserRow
-                user={item}
-                onEdit={() => setEditUser(item)}
-                onDelete={() => setDeleteUser(item)}
-              />
-            )}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={() => fetchUsers(true)} tintColor="#64748b" />
-            }
-            ListFooterComponent={() => (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#f8fafc', borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
-                <Text style={{ fontSize: 12, color: '#94a3b8' }}>
-                  Showing <Text style={{ fontWeight: '600', color: '#475569' }}>{filtered.length}</Text> of <Text style={{ fontWeight: '600', color: '#475569' }}>{totalUsers}</Text> users
-                </Text>
-              </View>
-            )}
-          />
         )}
-      </View>
-
-      {/* Bottom Spacer */}
-      <View style={{ height: 16 }} />
-
-      {/* Modals */}
-      <CreateUserModal
-        visible={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onCreated={handleCreated}
+        ListFooterComponent={() => (
+          <View style={{ paddingHorizontal: 20, marginBottom: 40 }}>
+            <View style={{ backgroundColor: cardBg, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, borderWidth: 1, borderColor: cardBorder, padding: 14 }}>
+              <Text style={{ fontSize: 13, color: subClr }}>Showing {filtered.length} of {users.length} users</Text>
+            </View>
+          </View>
+        )}
       />
+
+      {isCreateOpen && (
+        <CreateUserModal
+          visible={isCreateOpen}
+          isSuperAdmin={isSuperAdmin}
+          onClose={() => setIsCreateOpen(false)}
+          onCreated={(u) => setUsers([u, ...users])}
+        />
+      )}
       {editUser && (
         <EditUserModal
           user={editUser}
           visible={!!editUser}
+          isSuperAdmin={isSuperAdmin}
           onClose={() => setEditUser(null)}
-          onUpdated={(u) => { handleUpdated(u); setEditUser(u); }}
+          onUpdated={(u) => {
+            setUsers(users.map(old => old.id === u.id ? u : old));
+            setEditUser(null);
+          }}
+          onRequestDelete={() => setDeleteUser(editUser)}
         />
       )}
       {deleteUser && (
-        <DeleteConfirmDialog
+        <DeleteConfirmModal
           user={deleteUser}
           visible={!!deleteUser}
           onClose={() => setDeleteUser(null)}
-          onDeleted={handleDeleted}
+          onDeleted={(id) => {
+            setUsers(users.filter(u => u.id !== id));
+            setDeleteUser(null);
+          }}
         />
       )}
-    </SafeAreaView>
+
+      {/* Custom Filter Modal */}
+      <Modal visible={filterMenuVisible} transparent animationType="fade" onRequestClose={() => setFilterMenuVisible(false)}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setFilterMenuVisible(false)}
+          className="flex-1 bg-black/40 justify-center items-center px-4"
+        >
+          <TouchableOpacity activeOpacity={1} className="w-full max-w-[90%] bg-[#362f2f] rounded-3xl overflow-hidden shadow-2xl">
+            {[
+              { id: 'all', label: 'All Status' },
+              { id: 'active', label: 'Active' },
+              { id: 'inactive', label: 'Inactive' },
+            ].map((option, idx) => {
+              const isSelected = statusFilter === option.id;
+              return (
+                <TouchableOpacity
+                  key={option.id}
+                  onPress={() => {
+                    setStatusFilter(option.id as any);
+                    setFilterMenuVisible(false);
+                  }}
+                  className={`flex-row items-center justify-between px-6 py-5 ${idx !== 2 ? 'border-b border-white/10' : ''}`}
+                >
+                  <Text className="text-white text-[17px]">{option.label}</Text>
+                  <View className="w-6 h-6 rounded-full border-2 border-[#e2e8f0] items-center justify-center">
+                    {isSelected && <View className="w-3.5 h-3.5 rounded-full bg-[#fca5a5]" />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+    </View>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useColorScheme } from 'nativewind';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
@@ -7,6 +8,8 @@ import {
   Download, MessageSquare, ArrowLeft, Brain, Zap, Clock,
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Video, ResizeMode } from 'expo-av';
+import { API_BASE } from '../../services/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,8 +119,8 @@ function ReliabilityGauge({ score }: { score: number }) {
             transform: [{ rotate: `${(pct / 100) * 360}deg` }],
           }}
         />
-        <Text className="text-3xl font-bold text-slate-900">{pct}%</Text>
-        <Text className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mt-0.5">
+        <Text className="text-3xl font-bold text-slate-900 dark:text-white">{pct}%</Text>
+        <Text className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-0.5">
           Reliability
         </Text>
       </View>
@@ -133,10 +136,10 @@ function EmotionBreakdownChart({ breakdown }: { breakdown: EmotionBreakdown }) {
       {entries.map(([emotion, value]) => (
         <View key={emotion}>
           <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-xs font-semibold text-slate-600 capitalize">{emotion}</Text>
-            <Text className="text-xs font-mono text-slate-500">{Math.round(value * 100)}%</Text>
+            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-400 dark:text-slate-500 capitalize">{emotion}</Text>
+            <Text className="text-xs font-mono text-slate-500 dark:text-slate-400 dark:text-slate-500">{Math.round(value * 100)}%</Text>
           </View>
-          <View className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+          <View className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
             <View
               className="h-full rounded-full"
               style={{
@@ -155,10 +158,10 @@ function EmotionBreakdownChart({ breakdown }: { breakdown: EmotionBreakdown }) {
 function TimelineHeatmap({ segments, duration }: { segments: TimelineSegment[]; duration: number }) {
   return (
     <View className="mt-5">
-      <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+      <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
         Temporal State Heatmap
       </Text>
-      <View className="h-4 w-full rounded-md overflow-hidden flex-row border border-slate-200">
+      <View className="h-4 w-full rounded-md overflow-hidden flex-row border border-slate-200 dark:border-slate-800">
         {segments.map((seg, i) => {
           const flex = (seg.end_sec - seg.start_sec) / duration;
           return (
@@ -175,9 +178,9 @@ function TimelineHeatmap({ segments, duration }: { segments: TimelineSegment[]; 
         })}
       </View>
       <View className="flex-row justify-between mt-1">
-        <Text className="text-[10px] font-mono text-slate-400">{fmtTime(0)}</Text>
-        <Text className="text-[10px] font-mono text-slate-400">{fmtTime(duration / 2)}</Text>
-        <Text className="text-[10px] font-mono text-slate-400">{fmtTime(duration)}</Text>
+        <Text className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{fmtTime(0)}</Text>
+        <Text className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{fmtTime(duration / 2)}</Text>
+        <Text className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{fmtTime(duration)}</Text>
       </View>
     </View>
   );
@@ -188,14 +191,14 @@ function AcousticWaveform({ profile }: { profile: AcousticProfile }) {
   const bars = profile.waveform ?? Array(12).fill(0.5);
   const visible = bars.slice(0, 16); // show 16 bars on mobile
   return (
-    <View className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+    <View className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
       <View className="flex-row items-center mb-1">
         <View className="w-2 h-2 rounded-sm bg-slate-400 mr-2" />
-        <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+        <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider">
           Acoustic Analysis
         </Text>
       </View>
-      <Text className="text-[11px] text-slate-400 mb-3">
+      <Text className="text-[11px] text-slate-400 dark:text-slate-500 mb-3">
         {profile.tone_label} · {profile.cadence_wpm} WPM · {Math.round(profile.tone_clarity * 100)}% clarity
       </Text>
       <View className="h-20 flex-row items-end justify-between">
@@ -219,16 +222,16 @@ function AcousticWaveform({ profile }: { profile: AcousticProfile }) {
 /** Experta rule conclusions */
 function ExpertaPanel({ conclusions }: { conclusions: ExpertaConclusion[] }) {
   return (
-    <View className="space-y-3">
+    <View>
       {conclusions.map((c, i) => (
-        <View key={i} className="flex-row gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <View key={i} className="flex-row gap-3 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg" style={{ marginBottom: i < conclusions.length - 1 ? 12 : 0 }}>
           <Zap size={14} color="#6366f1" style={{ marginTop: 2, flexShrink: 0 }} />
           <View className="flex-1">
             <Text className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-0.5">
               {c.rule}
             </Text>
-            <Text className="text-xs text-slate-600 leading-relaxed">{c.conclusion}</Text>
-            <Text className="text-[10px] text-slate-400 mt-1 font-mono">
+            <Text className="text-xs text-slate-600 dark:text-slate-400 dark:text-slate-500 leading-relaxed">{c.conclusion}</Text>
+            <Text className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-mono">
               confidence: {Math.round(c.confidence * 100)}%
             </Text>
           </View>
@@ -246,10 +249,10 @@ function PendingState({ status }: { status: string }) {
       <View className="w-16 h-16 rounded-full bg-violet-100 items-center justify-center mb-5">
         <Brain size={28} color="#7c3aed" />
       </View>
-      <Text className="text-base font-bold text-slate-900 text-center">
+      <Text className="text-base font-bold text-slate-900 dark:text-white text-center">
         {isProcessing ? 'AI is analysing your data…' : 'Queued for Analysis'}
       </Text>
-      <Text className="text-sm text-slate-500 mt-2 text-center leading-relaxed">
+      <Text className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500 mt-2 text-center leading-relaxed">
         {isProcessing
           ? 'The neural network and Experta engine are processing this session. Go back to the archive to see when it completes.'
           : 'Your video is in the queue and will be processed shortly.'}
@@ -264,6 +267,9 @@ function PendingState({ status }: { status: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FusionEngineView() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const router = useRouter();
   const params = useLocalSearchParams<{ video?: string }>();
 
@@ -278,12 +284,12 @@ export default function FusionEngineView() {
 
   if (!video) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50 items-center justify-center px-8" edges={['top']}>
-        <View className="w-16 h-16 bg-slate-100 border border-slate-200 rounded-lg items-center justify-center mb-5">
+      <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-800 items-center justify-center px-8" edges={['top']}>
+        <View className="w-16 h-16 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg items-center justify-center mb-5">
           <Brain size={28} color="#94a3b8" />
         </View>
-        <Text className="text-xl font-bold text-slate-900 mb-2 text-center">No Session Selected</Text>
-        <Text className="text-sm text-slate-500 text-center mb-6">
+        <Text className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-center">No Session Selected</Text>
+        <Text className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500 text-center mb-6">
           Open a completed session from your Analysis Archive to view the full report.
         </Text>
         <TouchableOpacity
@@ -314,7 +320,7 @@ export default function FusionEngineView() {
   const badge = badgeStyle();
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-800" edges={['top']}>
       <ScrollView
         className="flex-1 px-4 py-6"
         contentContainerStyle={{ paddingBottom: 60 }}
@@ -325,13 +331,13 @@ export default function FusionEngineView() {
           <View className="flex-row items-center gap-3 flex-1">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="p-2 border border-slate-300 rounded-lg bg-white"
+              className="p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
             >
               <ArrowLeft size={16} color="#475569" />
             </TouchableOpacity>
             <View className="flex-1">
-              <Text className="text-xl font-bold text-slate-900 tracking-tight">Analysis Engine</Text>
-              <Text className="text-xs text-slate-500 mt-0.5 font-mono" numberOfLines={1}>{filename}</Text>
+              <Text className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Analysis Engine Output</Text>
+              <Text className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 mt-0.5 font-mono" numberOfLines={1}>{filename}</Text>
             </View>
           </View>
           <View
@@ -351,6 +357,16 @@ export default function FusionEngineView() {
         {isCompleted && ar && (
           <View className="space-y-6">
 
+            {/* Video player */}
+            <View className="bg-slate-900 rounded-lg overflow-hidden border border-slate-800 relative w-full mb-2" style={{ aspectRatio: 16/9 }}>
+              <Video
+                source={{ uri: video.file_path.startsWith('http') ? video.file_path : `${API_BASE}${video.file_path.startsWith('/') ? '' : '/'}${video.file_path}` }}
+                style={{ flex: 1 }}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+              />
+            </View>
+
             {/* Meta cards */}
             <View className="flex-row flex-wrap gap-3">
               {[
@@ -359,9 +375,9 @@ export default function FusionEngineView() {
                 { label: 'Duration', value: video.duration_seconds ? fmtTime(video.duration_seconds) : '—' },
                 { label: 'Posture',  value: ar.kinematic_state ?? '—' },
               ].map(({ label, value }) => (
-                <View key={label} className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm" style={{ minWidth: '45%', flex: 1 }}>
-                  <Text className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">{label}</Text>
-                  <Text className="text-sm font-semibold text-slate-900" numberOfLines={1}>{value}</Text>
+                <View key={label} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm" style={{ minWidth: '45%', flex: 1 }}>
+                  <Text className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">{label}</Text>
+                  <Text className="text-sm font-semibold text-slate-900 dark:text-white" numberOfLines={1}>{value}</Text>
                 </View>
               ))}
             </View>
@@ -378,28 +394,12 @@ export default function FusionEngineView() {
               </View>
             )}
 
-            {/* Kinematic state card */}
-            <View className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mt-5">
-              <View className="flex-row items-center mb-3">
-                <View className="w-2 h-2 rounded-sm bg-slate-900 mr-2" />
-                <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Kinematic Skeleton
-                </Text>
-              </View>
-              <View className="h-16 bg-slate-50 rounded-md border border-slate-200 items-center justify-center">
-                <View className="flex-row items-center gap-2">
-                  <Clock size={14} color="#64748b" />
-                  <Text className="text-xs uppercase font-bold text-slate-600">
-                    State: {ar.kinematic_state ?? 'Open'}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            {/* Kinematic state card removed */}
 
             {/* Emotion breakdown */}
             {ar.emotion_breakdown && (
-              <View className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm mt-5">
-                <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+              <View className="bg-white dark:bg-slate-900 p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mt-5">
+                <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">
                   Emotion Probability Distribution
                 </Text>
                 <EmotionBreakdownChart breakdown={ar.emotion_breakdown} />
@@ -408,10 +408,10 @@ export default function FusionEngineView() {
 
             {/* Experta conclusions */}
             {ar.experta_conclusions && ar.experta_conclusions.length > 0 && (
-              <View className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm mt-5">
+              <View className="bg-white dark:bg-slate-900 p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mt-5">
                 <View className="flex-row items-center gap-1.5 mb-4">
                   <Brain size={14} color="#6366f1" />
-                  <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                     Experta Rule Engine — Conclusions
                   </Text>
                 </View>
@@ -420,12 +420,12 @@ export default function FusionEngineView() {
             )}
 
             {/* Primary assessment card */}
-            <View className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm mt-5">
-              <View className="mb-6 border-b border-slate-100 pb-6 items-center">
-                <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            <View className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm mt-5">
+              <View className="mb-6 border-b border-slate-100 dark:border-slate-800 pb-6 items-center">
+                <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
                   Primary Assessment
                 </Text>
-                <Text className="text-2xl font-bold text-slate-900 leading-tight text-center">
+                <Text className="text-2xl font-bold text-slate-900 dark:text-white leading-tight text-center">
                   {ar.dominant_emotion ? capitalize(ar.dominant_emotion) : 'Completed'}
                 </Text>
               </View>
@@ -435,23 +435,23 @@ export default function FusionEngineView() {
               )}
 
               <View className="mb-6">
-                <Text className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-3">
+                <Text className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-3">
                   Synthesized Report
                 </Text>
-                <Text className="text-sm text-slate-600 leading-relaxed">
+                <Text className="text-sm text-slate-600 dark:text-slate-400 dark:text-slate-500 leading-relaxed">
                   {ar.nlp_summary ?? 'No summary available.'}
                 </Text>
               </View>
 
               {/* Action buttons */}
-              <View className="pt-6 border-t border-slate-100 space-y-3">
+              <View className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
                 <TouchableOpacity className="w-full flex-row items-center justify-center py-3 px-4 rounded-lg bg-slate-900">
                   <Download size={16} color="#ffffff" style={{ marginRight: 8 }} />
                   <Text className="text-sm font-semibold text-white">Export Data (.CSV)</Text>
                 </TouchableOpacity>
-                <TouchableOpacity className="w-full flex-row items-center justify-center py-3 px-4 border border-slate-300 rounded-lg bg-white mt-3">
+                <TouchableOpacity className="w-full flex-row items-center justify-center py-3 px-4 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 mt-3">
                   <MessageSquare size={16} color="#334155" style={{ marginRight: 8 }} />
-                  <Text className="text-sm font-semibold text-slate-700">Flag False Positive</Text>
+                  <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300">Flag False Positive</Text>
                 </TouchableOpacity>
               </View>
             </View>

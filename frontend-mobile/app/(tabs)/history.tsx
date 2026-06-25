@@ -1,14 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useColorScheme } from 'nativewind';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, CheckCircle2, Clock, Filter, Video, AlertTriangle, Brain } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { apiFetch } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const POLL_INTERVAL_MS = 4000;
+
+const fmtTime = (secs: number) => {
+  const m = Math.floor(secs / 60);
+  const s = Math.round(secs % 60);
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,11 +34,11 @@ interface VideoItem {
 
 function SkeletonCard() {
   return (
-    <View className="p-4 border-b border-slate-100 flex-row">
-      <View className="h-16 w-24 bg-slate-200 rounded mr-4" style={{ opacity: 0.6 }} />
+    <View className="p-4 border-b border-slate-100 dark:border-slate-800 flex-row">
+      <View className="h-16 w-24 bg-slate-200 dark:bg-slate-700 rounded mr-4" style={{ opacity: 0.6 }} />
       <View className="flex-1 justify-center space-y-2">
-        <View className="h-3 bg-slate-200 rounded w-3/4" style={{ opacity: 0.6 }} />
-        <View className="h-2.5 bg-slate-200 rounded w-1/2" style={{ opacity: 0.4 }} />
+        <View className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4" style={{ opacity: 0.6 }} />
+        <View className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-1/2" style={{ opacity: 0.4 }} />
       </View>
     </View>
   );
@@ -39,6 +47,9 @@ function SkeletonCard() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function HistoryView() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const router = useRouter();
   const [historyData, setHistoryData] = useState<VideoItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,6 +57,7 @@ export default function HistoryView() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { user } = useAuth();
 
   const fetchHistory = useCallback(async (isRefresh = false): Promise<VideoItem[]> => {
     try {
@@ -90,13 +102,14 @@ export default function HistoryView() {
 
   useEffect(() => {
     (async () => {
+      if (!user) return;
       const data = await fetchHistory();
       managePolling(data);
     })();
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [fetchHistory, managePolling]);
+  }, [fetchHistory, managePolling, user]);
 
   useEffect(() => {
     managePolling(historyData);
@@ -130,7 +143,7 @@ export default function HistoryView() {
   ).length;
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <View className="flex-1 bg-slate-50 dark:bg-slate-800">
       <ScrollView
         className="flex-1 px-4 py-6"
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -141,8 +154,8 @@ export default function HistoryView() {
 
         {/* Header */}
         <View className="mb-6">
-          <Text className="text-2xl font-bold text-slate-900 tracking-tight">Analysis Archive</Text>
-          <Text className="text-sm text-slate-500 mt-1">Review historical multi-modal assessments.</Text>
+          <Text className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Analysis Archive</Text>
+          <Text className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500 mt-1">Review historical multi-modal assessments.</Text>
         </View>
 
         {/* Search */}
@@ -156,13 +169,9 @@ export default function HistoryView() {
               placeholderTextColor="#94a3b8"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              className="pl-9 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
+              className="pl-9 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white"
             />
           </View>
-          <TouchableOpacity className="flex-row items-center px-4 py-3 bg-white border border-slate-300 rounded-lg">
-            <Filter size={16} color="#334155" />
-            <Text className="text-slate-700 text-sm font-semibold ml-2">Filter</Text>
-          </TouchableOpacity>
         </View>
 
         {/* AI Analysing Banner */}
@@ -183,30 +192,30 @@ export default function HistoryView() {
 
         {/* Content */}
         {loading ? (
-          <View className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+          <View className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
           </View>
         ) : error ? (
-          <View className="bg-white p-8 rounded-lg border border-slate-200 items-center justify-center shadow-sm">
+          <View className="bg-white dark:bg-slate-900 p-8 rounded-lg border border-slate-200 dark:border-slate-800 items-center justify-center shadow-sm">
             <AlertTriangle size={24} color="#ef4444" />
-            <Text className="text-slate-700 text-sm font-semibold text-center mt-3">{error}</Text>
+            <Text className="text-slate-700 dark:text-slate-300 text-sm font-semibold text-center mt-3">{error}</Text>
             <TouchableOpacity onPress={() => fetchHistory()} className="mt-4 px-4 py-2 bg-slate-900 rounded-md">
               <Text className="text-white text-xs font-semibold">Retry</Text>
             </TouchableOpacity>
           </View>
         ) : filteredHistory.length === 0 ? (
-          <View className="bg-white p-8 rounded-lg border border-slate-200 items-center justify-center shadow-sm py-16">
+          <View className="bg-white dark:bg-slate-900 p-8 rounded-lg border border-slate-200 dark:border-slate-800 items-center justify-center shadow-sm py-16">
             <Video size={36} color="#94a3b8" />
-            <Text className="text-slate-700 text-sm font-semibold text-center mt-3">No ingestions found</Text>
-            <Text className="text-slate-400 text-xs text-center mt-1">Upload a video or audio file to start.</Text>
+            <Text className="text-slate-700 dark:text-slate-300 text-sm font-semibold text-center mt-3">No ingestions found</Text>
+            <Text className="text-slate-400 dark:text-slate-500 text-xs text-center mt-1">Upload a video or audio file to start.</Text>
           </View>
         ) : (
-          <View className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+          <View className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             {filteredHistory.map((item, index) => {
               const statusUp = (item.status || 'PENDING').toUpperCase();
-              const isCompleted  = statusUp === 'COMPLETED';
+              const isCompleted = statusUp === 'COMPLETED';
               const isProcessing = statusUp === 'PROCESSING' || statusUp === 'PENDING';
-              const statusLabel  = statusUp.charAt(0) + statusUp.slice(1).toLowerCase();
+              const statusLabel = statusUp.charAt(0) + statusUp.slice(1).toLowerCase();
 
               return (
                 <TouchableOpacity
@@ -218,7 +227,7 @@ export default function HistoryView() {
                 >
                   {/* Thumbnail placeholder */}
                   <View className="mr-4">
-                    <View className="h-16 w-24 bg-slate-100 rounded border border-slate-200 items-center justify-center">
+                    <View className="h-16 w-24 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-800 items-center justify-center">
                       {isProcessing ? (
                         <Brain size={20} color="#7c3aed" />
                       ) : (
@@ -228,8 +237,11 @@ export default function HistoryView() {
                   </View>
 
                   <View className="flex-1 justify-center">
-                    <Text className="text-sm font-semibold text-slate-900" numberOfLines={1}>
+                    <Text className="text-sm font-semibold text-slate-900 dark:text-white" numberOfLines={1}>
                       {item.original_filename || 'Untitled Ingestion'}
+                    </Text>
+                    <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                      {item.duration_seconds ? fmtTime(item.duration_seconds) : '--:--'} • {item.file_size_mb ? `${item.file_size_mb} MB` : '-- MB'}
                     </Text>
 
                     {/* Dominant emotion on completed items */}
@@ -245,7 +257,7 @@ export default function HistoryView() {
                     )}
 
                     <View className="flex-row items-center justify-between mt-2">
-                      <Text className="text-xs font-mono text-slate-500">{formatDate(item.uploaded_at)}</Text>
+                      <Text className="text-xs font-mono text-slate-500 dark:text-slate-400 dark:text-slate-500">{formatDate(item.uploaded_at)}</Text>
 
                       <View className="flex-row items-center">
                         {isCompleted ? (
@@ -275,6 +287,6 @@ export default function HistoryView() {
         )}
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

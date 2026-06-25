@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const API_BASE = 'http://192.168.1.14:8000';
+export const API_BASE = 'https://marwanessam55-trivex-backend.hf.space';
 
 const TOKEN_KEY = 'trivex_access_token';
 const USER_KEY = 'trivex_user_data';
@@ -54,7 +54,12 @@ const safeStorage = {
 export async function saveSession(token: string, userData: any) {
   try {
     if (hasSecureStore) {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      try {
+        await SecureStore.setItemAsync(TOKEN_KEY, token);
+      } catch (secureErr) {
+        console.warn('SecureStore token save failed, using memory fallback.', secureErr);
+        memoryStorage[TOKEN_KEY] = token;
+      }
     } else {
       await safeStorage.setItem(TOKEN_KEY, token);
     }
@@ -67,13 +72,21 @@ export async function saveSession(token: string, userData: any) {
 export async function getSessionToken(): Promise<string | null> {
   try {
     if (hasSecureStore) {
-      return await SecureStore.getItemAsync(TOKEN_KEY);
+      try {
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        if (token !== null) {
+          return token;
+        }
+      } catch (secureErr) {
+        console.warn('SecureStore token read failed, using memory fallback.', secureErr);
+      }
+      return memoryStorage[TOKEN_KEY] || null;
     } else {
       return await safeStorage.getItem(TOKEN_KEY);
     }
   } catch (err) {
     console.error('Failed to get session token:', err);
-    return null;
+    return memoryStorage[TOKEN_KEY] || null;
   }
 }
 

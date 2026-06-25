@@ -39,7 +39,14 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Trivex to access your camera to record videos.",
+          "microphonePermission": "Allow Trivex to access your microphone to record audio."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

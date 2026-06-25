@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Activity, Mail, Lock, ArrowRight, AlertTriangle } from 'lucide-react-native';
+import { Activity, Mail, Lock, ArrowRight, AlertTriangle, Sun, Moon } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE } from '../services/api';
+import { useRouter } from 'expo-router';
+import { useTheme } from '../context/ThemeContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthView() {
   const { signIn } = useAuth();
+  const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +30,7 @@ export default function AuthView() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/auth/google`, {
+      const res = await fetch('https://marwanessam55-trivex-backend.hf.space/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: idToken }),
@@ -34,12 +39,13 @@ export default function AuthView() {
       if (res.ok) {
         const data = await res.json();
         await signIn(data.access_token);
+        router.replace('/(tabs)');
       } else {
         const err = await res.json().catch(() => ({ detail: 'Google authentication failed' }));
         setError(err.detail || 'Google authentication failed.');
       }
-    } catch {
-      setError('Network error connecting to the server.');
+    } catch (err: any) {
+      setError(err?.message || 'Network error connecting to the server.');
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +73,7 @@ export default function AuthView() {
 
     try {
       const details = {
-        'username': email,
+        'username': email.trim(),
         'password': password,
       };
 
@@ -75,7 +81,7 @@ export default function AuthView() {
         .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(details[key as keyof typeof details]))
         .join('&');
 
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res = await fetch('https://marwanessam55-trivex-backend.hf.space/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -86,111 +92,145 @@ export default function AuthView() {
       if (res.ok) {
         const data = await res.json();
         await signIn(data.access_token);
+        router.replace('/(tabs)');
       } else {
         const err = await res.json().catch(() => ({ detail: 'Authentication failed' }));
         setError(err.detail || 'Authentication failed. Please check your credentials.');
       }
-    } catch {
-      setError('Network error connecting to the server.');
+    } catch (err: any) {
+      setError(err?.message || 'Network error connecting to the server.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const bg = isDark ? '#0f172a' : '#ffffff';
+  const cardBg = isDark ? '#1e293b' : '#f8fafc';
+  const borderClr = isDark ? '#334155' : '#e2e8f0';
+  const textClr = isDark ? '#f1f5f9' : '#0f172a';
+  const subClr = isDark ? '#94a3b8' : '#64748b';
+  const inputBg = isDark ? '#0f172a' : '#ffffff';
+
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView 
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="px-6 py-12">
-          
-          <View className="mb-10 items-center">
-            <View className="flex-row items-center mb-6">
-              <Activity size={32} color="#0f172a" />
-              <Text className="ml-2 font-bold text-2xl text-slate-900 tracking-wider uppercase">Trivex</Text>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} style={{ paddingHorizontal: 24, paddingVertical: 48 }}>
+
+          {/* Dark mode toggle */}
+          <TouchableOpacity
+            onPress={toggleTheme}
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 0,
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+              borderWidth: 1,
+              borderColor: borderClr,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {isDark
+              ? <Sun size={18} color="#ffffff" />
+              : <Moon size={18} color="#475569" />
+            }
+          </TouchableOpacity>
+
+          <View style={{ marginBottom: 40, alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+              <Activity size={32} color="#0d9488" />
+              <Text style={{ marginLeft: 8, fontWeight: '700', fontSize: 22, color: textClr, letterSpacing: 2, textTransform: 'uppercase' }}>Trivex</Text>
             </View>
-            <Text className="text-3xl font-bold text-slate-900 tracking-tight text-center">Access Workspace</Text>
-            <Text className="mt-2 text-slate-500 text-center">Authenticate to enter the secure environment.</Text>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: textClr, letterSpacing: -0.5, textAlign: 'center' }}>Access Workspace</Text>
+            <Text style={{ marginTop: 8, color: subClr, textAlign: 'center', fontSize: 14 }}>Authenticate to enter the secure environment.</Text>
           </View>
 
           {error && (
-            <View className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex-row items-start">
-              <AlertTriangle size={20} color="#ef4444" className="mr-3 mt-0.5" />
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-red-800">Authentication Error</Text>
-                <Text className="text-xs text-red-700 mt-1">{error}</Text>
+            <View style={{ marginBottom: 24, padding: 16, borderRadius: 10, backgroundColor: isDark ? '#450a0a' : '#fef2f2', borderWidth: 1, borderColor: isDark ? '#7f1d1d' : '#fecaca', flexDirection: 'row', alignItems: 'flex-start' }}>
+              <AlertTriangle size={20} color="#ef4444" style={{ marginRight: 12, marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#fca5a5' : '#991b1b' }}>Authentication Error</Text>
+                <Text style={{ fontSize: 12, color: isDark ? '#f87171' : '#b91c1c', marginTop: 4 }}>{error}</Text>
               </View>
             </View>
           )}
 
-          <View className="space-y-6">
-            <View className="space-y-5">
-              <View className="relative justify-center">
-                <View className="absolute left-4 z-10">
-                  <Mail size={20} color="#94a3b8" />
-                </View>
-                <TextInput
-                  className="w-full pl-11 pr-4 py-4 bg-white border border-slate-300 rounded-lg text-slate-900 text-base"
-                  placeholder="admin@trivex.io"
-                  placeholderTextColor="#94a3b8"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
+          <View style={{ gap: 16 }}>
+            {/* Email */}
+            <View style={{ position: 'relative', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', left: 16, zIndex: 10 }}>
+                <Mail size={20} color="#94a3b8" />
               </View>
-
-              <View className="relative justify-center mt-4">
-                <View className="absolute left-4 z-10">
-                  <Lock size={20} color="#94a3b8" />
-                </View>
-                <TextInput
-                  className="w-full pl-11 pr-4 py-4 bg-white border border-slate-300 rounded-lg text-slate-900 text-base"
-                  placeholder="••••••••"
-                  placeholderTextColor="#94a3b8"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-              </View>
+              <TextInput
+                style={{ width: '100%', paddingLeft: 48, paddingRight: 16, paddingVertical: 16, backgroundColor: inputBg, borderWidth: 1, borderColor: borderClr, borderRadius: 10, color: textClr, fontSize: 15 }}
+                placeholder="admin@trivex.io"
+                placeholderTextColor="#94a3b8"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
             </View>
 
-            <View className="flex-row items-center justify-between mt-4">
-              <Text className="text-sm font-medium text-slate-900">Reset credentials</Text>
+            {/* Password */}
+            <View style={{ position: 'relative', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', left: 16, zIndex: 10 }}>
+                <Lock size={20} color="#94a3b8" />
+              </View>
+              <TextInput
+                style={{ width: '100%', paddingLeft: 48, paddingRight: 16, paddingVertical: 16, backgroundColor: inputBg, borderWidth: 1, borderColor: borderClr, borderRadius: 10, color: textClr, fontSize: 15 }}
+                placeholder="••••••••"
+                placeholderTextColor="#94a3b8"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
             </View>
 
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: '500', color: subClr }}>Reset credentials</Text>
+            </View>
+
+            {/* Login button */}
             <TouchableOpacity
               onPress={handleLogin}
               disabled={isLoading}
-              className="w-full flex-row items-center justify-center py-4 px-4 rounded-lg bg-slate-900 mt-6"
+              style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 10, backgroundColor: isDark ? '#f1f5f9' : '#0f172a', marginTop: 8, opacity: isLoading ? 0.7 : 1 }}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={isDark ? '#0f172a' : '#ffffff'} />
               ) : (
                 <>
-                  <Text className="text-base font-semibold text-white mr-2">Authenticate</Text>
-                  <ArrowRight size={16} color="#ffffff" />
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#0f172a' : '#ffffff', marginRight: 8 }}>Authenticate</Text>
+                  <ArrowRight size={16} color={isDark ? '#0f172a' : '#ffffff'} />
                 </>
               )}
             </TouchableOpacity>
-            
-            <View className="mt-8 flex-row items-center justify-center">
-              <View className="flex-1 border-t border-slate-200" />
-              <Text className="px-4 text-xs font-medium uppercase tracking-wider text-slate-400">Or</Text>
-              <View className="flex-1 border-t border-slate-200" />
+
+            {/* Divider */}
+            <View style={{ marginTop: 24, flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flex: 1, borderTopWidth: 1, borderTopColor: borderClr }} />
+              <Text style={{ paddingHorizontal: 16, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1.5, color: subClr }}>Or</Text>
+              <View style={{ flex: 1, borderTopWidth: 1, borderTopColor: borderClr }} />
             </View>
 
+            {/* Google button */}
             <TouchableOpacity
               onPress={() => promptAsync()}
               disabled={isLoading || !request}
-              className="w-full flex-row items-center justify-center py-4 px-4 border border-slate-300 rounded-lg bg-white mt-6"
+              style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: borderClr, borderRadius: 10, backgroundColor: inputBg, marginTop: 8 }}
             >
-              <Text className="text-base font-semibold text-slate-700">Continue with Google</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: textClr }}>Continue with Google</Text>
             </TouchableOpacity>
           </View>
-          
-          <Text className="mt-10 text-center text-xs text-slate-500">
+
+          <Text style={{ marginTop: 40, textAlign: 'center', fontSize: 12, color: subClr }}>
             For organizational access, contact your system administrator.
           </Text>
 

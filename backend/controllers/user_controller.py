@@ -52,6 +52,21 @@ async def upload_avatar(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Avatar upload failed: {str(e)}")
 
+@router.delete("/me/avatar", response_model=UserProfileResponse)
+def delete_avatar(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Remove the logged-in user's profile picture.
+    """
+    current_user.profile_picture_url = None
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 
 @router.post("/change-password")
 def change_password(

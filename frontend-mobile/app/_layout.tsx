@@ -5,8 +5,11 @@ import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+import { useColorScheme } from 'nativewind';
+import { AuthProvider, decodeJWT, useAuth } from '../context/AuthContext';
+import { ThemeProvider as CustomThemeProvider } from '../context/ThemeContext';
+import { LanguageProvider } from '../context/LanguageContext';
+import { UnreadProvider } from '../context/UnreadContext';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -23,7 +26,7 @@ function NavigationGuard() {
     // Check if the user is currently inside the 'auth' route group
     const inAuthGroup = segments[0] === 'auth';
     const inTabsGroup = segments[0] === '(tabs)';
-    const currentTab = segments[1]; // e.g. 'index', 'history', 'admin', 'account'
+    const currentTab = segments.length > 1 ? segments[1] : 'index'; // Handle default index tab
 
     if (!token && !inAuthGroup) {
       // If the user has no token and is NOT on the landing index screen, redirect to login
@@ -32,18 +35,14 @@ function NavigationGuard() {
         router.replace('/auth');
       }
     } else if (token && inAuthGroup) {
-      // If the user has an active token and is on the login/auth page, redirect them to dashboard
+      // If the user has an active token and is on the login/auth page, redirect them immediately to the dashboard.
       router.replace('/(tabs)');
-    } else if (token && inTabsGroup && user) {
-      // Role-based enforcement within tabs
-      const role = (user.role || 'USER').toUpperCase();
+    } else if (token && inTabsGroup) {
+      // Role-based enforcement within tabs, using profile if available or token fallback.
+      const role = user ? (user.role || 'USER').toUpperCase() : (decodeJWT(token)?.role?.toUpperCase() || 'USER');
       const isAdmin = role === 'ADMIN';
 
-      // If ADMIN is on user-only tabs (index/dashboard, history), redirect to admin tab
-      if (isAdmin && (currentTab === 'index' || currentTab === 'history')) {
-        router.replace('/(tabs)/admin');
-      }
-      // If USER is on admin tab, redirect to user dashboard
+      // If USER is on admin-only route, redirect to dashboard.
       if (!isAdmin && currentTab === 'admin') {
         router.replace('/(tabs)');
       }
@@ -69,14 +68,20 @@ function NavigationGuard() {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme();
 
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <NavigationGuard />
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <CustomThemeProvider>
+        <LanguageProvider>
+          <UnreadProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <NavigationGuard />
+              <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+            </ThemeProvider>
+          </UnreadProvider>
+        </LanguageProvider>
+      </CustomThemeProvider>
     </AuthProvider>
   );
 }

@@ -1,50 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import { saveSession, clearSession, getSessionToken, getSessionUser, apiFetch } from '../services/api';
 
 export function decodeJWT(token: string) {
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    
-    let base64Url = parts[1];
-    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    
-    // Add padding back if necessary
-    while (base64.length % 4) {
-      base64 += '=';
-    }
-    
-    // Base64 decode in pure JavaScript (robust for React Native engines)
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-    let str = '';
-    for (let i = 0, bc = 0, bs = 0, r1, r2, r3; i < base64.length; i++) {
-      const idx = chars.indexOf(base64.charAt(i));
-      if (idx === -1) continue;
-      
-      bc = bc % 4;
-      if (bc === 0) {
-        bs = idx;
-      } else if (bc === 1) {
-        r1 = (bs << 2) | (idx >> 4);
-        str += String.fromCharCode(r1);
-        bs = idx;
-      } else if (bc === 2) {
-        r2 = ((bs & 15) << 4) | (idx >> 2);
-        str += String.fromCharCode(r2);
-        bs = idx;
-      } else if (bc === 3) {
-        r3 = ((bs & 3) << 6) | idx;
-        str += String.fromCharCode(r3);
-      }
-      bc++;
-    }
-    
-    // Support UTF-8 multi-byte decoding
-    return JSON.parse(decodeURIComponent(
-      str.split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-    ));
+    return jwtDecode<any>(token);
   } catch (e) {
-    console.error("JWT Decode error:", e);
+    console.error('JWT Decode error:', e);
     return null;
   }
 }
@@ -83,26 +45,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const storedToken = await getSessionToken();
         const storedUser = await getSessionUser();
-        
-        if (storedToken && storedUser) {
+
+        if (storedToken) {
           const decoded = decodeJWT(storedToken);
-          // Check token expiration (exp is in seconds)
           if (decoded && decoded.exp * 1000 > Date.now()) {
             setToken(storedToken);
-            setUser(storedUser);
-            // Silently refresh the full user profile details from backend
-            apiFetch('/auth/me')
-              .then(profile => {
-                setUser(profile);
-                saveSession(storedToken, profile);
-              })
-              .catch(err => console.log("Silent profile load failed", err));
+            if (storedUser) {
+              setUser(storedUser);
+            }
+
+            try {
+              const profile = await apiFetch('/auth/me');
+              setUser(profile);
+              await saveSession(storedToken, profile);
+            } catch (fetchError: any) {
+              console.warn('Silent profile load failed', fetchError);
+              if (fetchError?.message?.includes('401') || fetchError?.message?.includes('403')) {
+                setToken(null);
+                setUser(null);
+                await clearSession();
+              }
+            }
           } else {
             await clearSession();
           }
         }
       } catch (e) {
-        console.error("Error loading session:", e);
+        console.error('Error loading session:', e);
       } finally {
         setIsLoading(false);
       }
@@ -113,23 +82,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (newToken: string) => {
     setToken(newToken);
     
+    const decoded = decodeJWT(newToken);
+    const fallbackUser = decoded ? {
+      email: decoded.sub,
+      role: (decoded.role || 'USER').toUpperCase(),
+    } : { role: 'USER' };
+
+    setUser(fallbackUser);
+    await saveSession(newToken, fallbackUser);
+
     try {
-      const decoded = decodeJWT(newToken);
-      // Create temporary fallback user with decoded role & sub
-      const fallbackUser = decoded ? { 
-        email: decoded.sub, 
-        role: (decoded.role || 'USER').toUpperCase() 
-      } : { role: 'USER' };
-      
-      setUser(fallbackUser);
-      await saveSession(newToken, fallbackUser);
-      
-      // Perform immediate full profile fetch from server
       const profile = await apiFetch('/auth/me');
       setUser(profile);
       await saveSession(newToken, profile);
-    } catch (err) {
-      console.error("Sign in profiles error:", err);
+    } catch (err: any) {
+      console.warn('Sign in profiles error:', err);
+      if (err?.message?.includes('401') || err?.message?.includes('403')) {
+        setToken(null);
+        setUser(null);
+        await clearSession();
+        throw err;
+      }
+      // Keep the fallback session for non-auth profile fetch failures.
     }
   };
 
