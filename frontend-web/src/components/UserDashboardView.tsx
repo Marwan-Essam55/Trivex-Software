@@ -86,31 +86,45 @@ export function UserDashboardView() {
     setUploadState('uploading');
     setUploadError(null);
 
+    // Build the multipart body — do NOT manually set Content-Type;
+    // the browser will append the correct boundary automatically.
     const formData = new FormData();
     formData.append('file', file);
 
+    // Retrieve the JWT from storage, same source as authHeaders().
+    const token = localStorage.getItem('access_token');
+
     try {
-      const res = await fetch(`${API_BASE}/api/videos/upload`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: formData,
-      });
+      const res = await fetch(
+        'https://marwanessam55-trivex-backend.hf.space/api/videos/analyze-video',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // Required to bypass Ngrok's browser-warning interstitial page.
+            'ngrok-skip-browser-warning': 'true',
+          },
+          body: formData,
+        }
+      );
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
-        throw new Error(err.detail || 'Upload failed');
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[handleUpload] Analysis result:', data);
+
+        setUploadState('success');
+        setTimeout(() => {
+          navigate('/fusion-engine', { state: { video: data } });
+        }, 800);
+      } else {
+        // Attempt to surface the FastAPI error detail; fall back gracefully.
+        const errorBody = await res.json().catch(() => ({ detail: 'Analysis failed' }));
+        console.error('[handleUpload] Server error:', res.status, errorBody);
+        throw new Error(errorBody.detail || `Request failed with status ${res.status}`);
       }
-
-      const video: VideoRecord = await res.json();
-      setUploadState('success');
-
-      setTimeout(() => {
-        navigate('/fusion-engine', { state: { video } });
-      }, 800);
-
     } catch (err: any) {
       setUploadState('error');
-      setUploadError(err.message || "An unexpected error occurred.");
+      setUploadError(err.message || 'An unexpected error occurred.');
       setSelectedFile(null);
     }
   };
