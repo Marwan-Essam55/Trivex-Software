@@ -340,7 +340,7 @@ export function HomeView() {
                 <div className="w-12 h-12 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg flex items-center justify-center mb-6 border border-slate-200/80 dark:border-slate-600 group-hover:bg-teal-50/30 group-hover:border-teal-200 group-hover:text-teal-600 transition-colors duration-200">
                   <Brain className="w-6 h-6 stroke-[1.5]" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 group-hover:text-teal-600 transition-colors duration-200">Experta Rules Engine</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 group-hover:text-teal-600 transition-colors duration-200">Explainable AI (XAI)</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
                   Integration of symbolic AI and expert rules for logical, accurate behavioral analysis and interpretation.
                 </p>
