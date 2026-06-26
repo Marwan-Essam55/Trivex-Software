@@ -1,9 +1,10 @@
 import {
   Download, MessageSquare, Pause, Play, SkipBack, SkipForward,
-  Volume2, Maximize, ArrowLeft, FileVideo, Brain, Zap,
+  Volume2, Maximize, ArrowLeft, FileVideo, Brain, Zap, Trash2,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRef, useState } from 'react';
+import API_BASE from '../config';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,7 @@ interface VideoData {
   status: string;
   uploaded_at: string;
   analysis_results: AnalysisResults | null;
+  ai_raw_result?: AnalysisResults | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,6 +219,32 @@ export function FusionEngineView() {
     setIsPlaying(!isPlaying);
   };
 
+  const handleDelete = async () => {
+    if (!video) return;
+    if (!window.confirm("Are you sure you want to delete this video?")) {
+      return;
+    }
+
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`${API_BASE}/api/videos/${video.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        navigate('/history');
+      } else {
+        const errorBody = await res.json().catch(() => ({ detail: 'Failed to delete video' }));
+        alert(errorBody.detail || 'An error occurred while trying to delete this video.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred while trying to delete this video.');
+    }
+  };
+
   if (!video) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in font-sans">
@@ -240,7 +268,7 @@ export function FusionEngineView() {
     );
   }
 
-  const ar = video.analysis_results;
+  const ar = video.ai_raw_result || video.analysis_results;
   const isCompleted = video.status.toUpperCase() === 'COMPLETED';
   const duration = video.duration_seconds ?? 120;
 
@@ -397,6 +425,13 @@ export function FusionEngineView() {
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Flag False Positive
                 </button>
+                <button
+                  onClick={handleDelete}
+                  className="w-full flex items-center justify-center py-2.5 px-4 border border-red-300 hover:border-red-600 rounded-lg text-sm font-semibold text-red-600 hover:text-white hover:bg-red-600 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Video
+                </button>
               </div>
             </div>
           </div>
@@ -422,7 +457,7 @@ function getLabel(emotion: string): string {
 }
 
 function exportCSV(video: VideoData) {
-  const ar = video.analysis_results;
+  const ar = video.ai_raw_result || video.analysis_results;
   if (!ar) return;
 
   const rows: string[][] = [

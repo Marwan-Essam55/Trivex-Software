@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, CheckCircle2, Clock, AlertTriangle, Video, Loader2, FileVideo, Brain } from 'lucide-react';
+import { Search, CheckCircle2, Clock, AlertTriangle, Video, Loader2, FileVideo, Brain, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import API_BASE from '../config';
@@ -26,6 +26,7 @@ interface VideoRecord {
   status: string;
   uploaded_at: string;
   analysis_results: AnalysisResults | null;
+  ai_raw_result: AnalysisResults | null;
 }
 
 function authHeaders(): Record<string, string> {
@@ -86,6 +87,28 @@ export function HistoryView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleDelete = async (videoId: string) => {
+    if (!window.confirm("Are you sure you want to delete this video?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/videos/${videoId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+
+      if (res.ok) {
+        setVideos((prev) => prev.filter((v) => v.id !== videoId));
+      } else {
+        const errorBody = await res.json().catch(() => ({ detail: 'Failed to delete video' }));
+        alert(errorBody.detail || 'An error occurred while trying to delete this video.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred while trying to delete this video.');
+    }
+  };
 
   const fetchVideos = useCallback(async () => {
     try {
@@ -267,9 +290,9 @@ export function HistoryView() {
                         {isProcessing && (
                           <div className="mt-1"><ProcessingBadge /></div>
                         )}
-                        {isCompleted && item.analysis_results?.dominant_emotion && (
+                        {isCompleted && (item.ai_raw_result?.dominant_emotion || item.analysis_results?.dominant_emotion) && (
                           <div className="text-xs text-slate-400 mt-0.5 capitalize">
-                            {item.analysis_results.dominant_emotion} · {Math.round((item.analysis_results.reliability_score ?? 0) * 100)}% reliable
+                            {item.ai_raw_result?.dominant_emotion || item.analysis_results?.dominant_emotion} · {Math.round(((item.ai_raw_result?.reliability_score ?? item.analysis_results?.reliability_score) ?? 0) * 100)}% reliable
                           </div>
                         )}
                       </td>
@@ -290,7 +313,7 @@ export function HistoryView() {
                           {item.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-2">
                         {isCompleted ? (
                           <button
                             onClick={() => navigate('/fusion-engine', { state: { video: item } })}
@@ -299,10 +322,17 @@ export function HistoryView() {
                             View Report
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-400 italic select-none">
+                          <span className="text-xs text-slate-400 italic select-none mr-2">
                             {isProcessing ? 'Processing…' : 'Queued'}
                           </span>
                         )}
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1.5 text-red-600 hover:text-white hover:bg-red-600 border border-transparent hover:border-red-600 rounded-md transition-all duration-150"
+                          title="Delete Video"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   );

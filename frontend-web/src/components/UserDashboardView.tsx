@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { UploadCloud, Video, BarChart3, Activity, CheckCircle2, Clock, PlayCircle, Loader2, AlertTriangle, X, FileVideo, Square, CameraOff } from 'lucide-react';
+import { UploadCloud, Video, BarChart3, Activity, CheckCircle2, Clock, PlayCircle, Loader2, AlertTriangle, X, FileVideo, Square, CameraOff, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import API_BASE from '../config';
@@ -21,7 +21,7 @@ function authHeaders(): Record<string, string> {
   };
 }
 
-type UploadState = 'idle' | 'uploading' | 'success' | 'error';
+type UploadState = 'idle' | 'uploading' | 'pending_analysis' | 'success' | 'error';
 
 export function UserDashboardView() {
   const navigate = useNavigate();
@@ -94,33 +94,78 @@ export function UserDashboardView() {
     // Retrieve the JWT from storage, same source as authHeaders().
     const token = localStorage.getItem('access_token');
 
+    let uploadData;
     try {
-      const res = await fetch(
-        'https://marwanessam55-trivex-backend.hf.space/api/videos/analyze-video',
+      // 1. Upload video to Cloudinary via POST /api/videos/upload
+      const uploadRes = await fetch(
+        `${API_BASE}/api/videos/upload`,
         {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            // Required to bypass Ngrok's browser-warning interstitial page.
-            'ngrok-skip-browser-warning': 'true',
           },
           body: formData,
         }
       );
 
-      if (res.ok) {
-        const data = await res.json();
-        console.log('[handleUpload] Analysis result:', data);
+      if (!uploadRes.ok) {
+        const errorBody = await uploadRes.json().catch(() => ({ detail: 'Upload failed' }));
+        throw new Error(errorBody.detail || `Upload failed with status ${uploadRes.status}`);
+      }
+
+      uploadData = await uploadRes.json();
+    } catch (err: any) {
+      setUploadState('error');
+      setUploadError(err.message || 'An unexpected error occurred.');
+      setSelectedFile(null);
+      return;
+    }
+
+    const id = uploadData.id;
+    if (!id) {
+      setUploadState('error');
+      setUploadError('Upload succeeded but did not return a valid video ID.');
+      setSelectedFile(null);
+      return;
+    }
+
+    // 2. CRITICAL UI TRANSITION: The moment the upload succeeds and you have the id,
+    //    change the component state to render the "PENDING ANALYSIS" / "Queued for Analysis" screen.
+    setUploadState('pending_analysis');
+
+    try {
+      // 3. While on this screen, execute POST /api/videos/analyze-video?video_id=${id}
+      const analyzeRes = await fetch(
+        `${API_BASE}/api/videos/analyze-video?video_id=${id}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (analyzeRes.ok) {
+        const aiRawResult = await analyzeRes.json();
+        console.log('[handleUpload] Analysis result:', aiRawResult);
+
+        // Construct the full video data object required by /fusion-engine
+        const videoData = {
+          ...uploadData,
+          status: 'COMPLETED',
+          ai_raw_result: aiRawResult,
+          analysis_results: aiRawResult,
+        };
 
         setUploadState('success');
         setTimeout(() => {
-          navigate('/fusion-engine', { state: { video: data } });
+          navigate('/fusion-engine', { state: { video: videoData } });
         }, 800);
       } else {
-        // Attempt to surface the FastAPI error detail; fall back gracefully.
-        const errorBody = await res.json().catch(() => ({ detail: 'Analysis failed' }));
-        console.error('[handleUpload] Server error:', res.status, errorBody);
-        throw new Error(errorBody.detail || `Request failed with status ${res.status}`);
+        const errorBody = await analyzeRes.json().catch(() => ({ detail: 'Analysis failed' }));
+        console.error('[handleUpload] Server error:', analyzeRes.status, errorBody);
+        throw new Error(errorBody.detail || `Request failed with status ${analyzeRes.status}`);
       }
     } catch (err: any) {
       setUploadState('error');
@@ -424,7 +469,7 @@ export function UserDashboardView() {
             <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center mb-5">
               <Loader2 className="w-8 h-8 text-slate-700 animate-spin" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Uploading to Cloud…</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Uploading…</h3>
             <p className="text-sm text-slate-500 mb-4">
               {selectedFile?.name && (
                 <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded border border-slate-200">
@@ -440,6 +485,19 @@ export function UserDashboardView() {
                 {selectedFile && `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`} · This may take a moment for large files…
               </p>
             </div>
+          </div>
+        )}
+
+        {uploadState === 'pending_analysis' && (
+          <div className="w-full max-w-3xl py-10 flex flex-col items-center">
+            <div className="relative flex h-16 w-16 items-center justify-center mb-5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-25" />
+              <Brain className="relative w-8 h-8 text-violet-600 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Queued for Analysis</h3>
+            <p className="text-sm text-slate-500 mb-4 max-w-md">
+              Your video has been uploaded and is in the processing queue. The neural network and Experta engine are processing this session...
+            </p>
           </div>
         )}
 
